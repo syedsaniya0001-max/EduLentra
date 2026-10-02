@@ -99,53 +99,63 @@ function Home() {
                     </a>
 
 
-                    <a
-                        href="#about"
-                        style={linkStyle}
-                    >
-                        About
-                    </a>
+                      <a href="/about" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+    About
+</a>
 
 
-                    <a
-                        href="#highlights"
-                        style={linkStyle}
-                    >
-                        Highlights
-                    </a>
+                   <a href="/highlights" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+    Highlights
+</a>
+
+                 <a href="/gallery" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+    Gallery
+</a>
 
 
-                    <a
-                        href="#gallery"
-                        style={linkStyle}
-                    >
-                        Gallery
-                    </a>
+                  <div className="login-dropdown">
 
+    <a 
+        href="#login" 
+        style={linkStyle}
+        className="login-link"
+    >
+        Login ▾
+    </a>
 
-                    <a
-                        href="#login"
-                        style={linkStyle}
-                    >
-                        Login
-                    </a>
+    <div className="login-menu">
 
+        <Link to="/student" className="login-role">
+            🎓 <span>Student</span>
+        </Link>
 
-                    <a
-                        href="#contact"
-                        style={linkStyle}
-                    >
-                        Contact
-                    </a>
+        <Link to="/faculty" className="login-role">
+            👨‍🏫 <span>Faculty</span>
+        </Link>
 
+        <Link to="/hod" className="login-role">
+            🏫 <span>HOD</span>
+        </Link>
 
-                    <Link
+        <Link to="/admin" className="login-role">
+            💻 <span>Admin</span>
+        </Link>
+
+    </div>
+
+</div>
+
+<a href="/contact" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+    Contact
+</a>
+
+                    {/* <Link
                         to="/role"
                         className="hero-btn"
                         style={linkStyle}
                     >
                         Get Started
-                    </Link>
+                       </Link> */}
 
                 </nav>
 

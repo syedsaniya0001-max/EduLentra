@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import "./StudentLogin.css";
 
-import bookCover from "../assets/book-cover01.png";
-import goldKey from "../assets/gold-key.png";
+import bookCover from "../assets/BOOK-NEW.png";
+import goldKey from "../assets/key.png";
 import paper from "../assets/paper.png";
 
 function StudentLogin() {

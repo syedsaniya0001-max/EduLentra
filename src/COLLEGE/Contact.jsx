@@ -49,7 +49,7 @@ function Contact() {
 
         <div>
           <h4>Quick Links</h4>
-          <p><a href="#home">Home</a> | <a href="#about">About</a> | <a href="#highlights">Highlights</a> | <a href="#login">Login</a> | <a href="#contact">Contact</a></p>
+          <p><a href="/">Home</a> | <a href="/about">About</a> | <a href="/highlights">Highlights</a> | <a href="/contact">Contact</a></p>
         </div>
 
         <div>
