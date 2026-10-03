@@ -1,0 +1,324 @@
+:root {
+  --role-primary: #1e3a8a;
+  --role-accent: #2563eb;
+  --role-accent-soft: #eff6ff;
+  --role-background: #f7faff;
+  --role-surface: #ffffff;
+  --role-text: #172033;
+  --role-muted: #64748b;
+  --role-border: #e2e8f0;
+  --role-font: Arial, Helvetica, sans-serif;
+}
+
+.student-login-page,
+.faculty-page,
+.hod-section,
+.admin-login-page {
+  color: var(--role-text);
+  font-family: var(--role-font);
+  background: var(--role-background);
+}
+
+.student-dashboard,
+.faculty-dashboard-layout,
+.hod-layout,
+.admin-dashboard {
+  color: var(--role-text);
+  font-family: var(--role-font);
+  font-size: 14px;
+  background: var(--role-background);
+}
+
+.role-page {
+  color: var(--role-text);
+  font-family: var(--role-font);
+  background: var(--role-background);
+}
+
+.role-page .title {
+  color: var(--role-primary);
+  font-family: var(--role-font);
+  font-size: 32px;
+}
+
+.role-page .subtitle {
+  color: var(--role-muted);
+  font-size: 14px;
+}
+
+.role-page .role-card,
+.role-page .role-card.student,
+.role-page .role-card.faculty,
+.role-page .role-card.hod,
+.role-page .role-card.admin {
+  border-color: var(--role-border);
+  background: var(--role-surface);
+  color: var(--role-primary);
+  font-family: var(--role-font);
+}
+
+.role-page .role-card:hover {
+  border-color: var(--role-accent);
+  background: var(--role-accent-soft);
+  color: var(--role-primary);
+  transform: translateY(-4px);
+}
+
+.role-page .role-card h2 {
+  color: var(--role-primary);
+  font-size: 20px;
+}
+
+.role-page .role-card p {
+  color: var(--role-muted);
+  font-size: 14px;
+}
+
+.login-menu .login-role {
+  font-family: var(--role-font) !important;
+  font-size: 14px !important;
+}
+
+.login-menu .login-role:hover {
+  background: var(--role-accent-soft) !important;
+  color: var(--role-accent) !important;
+  -webkit-text-fill-color: var(--role-accent) !important;
+  transform: translateX(2px) !important;
+}
+
+.student-login-page > h1,
+.faculty-title,
+.hod-title h1,
+.admin-login-title h1 {
+  color: var(--role-primary);
+  font-size: 32px;
+  font-family: var(--role-font);
+  font-weight: 700;
+}
+
+.faculty-title {
+  background: none;
+  -webkit-text-fill-color: var(--role-primary);
+}
+
+.admin-login-title p,
+.hod-title p {
+  color: var(--role-muted);
+  font-size: 14px;
+}
+
+.student-form h2,
+.faculty-portal h2,
+.hod-login-box h2,
+.screen-content h2 {
+  font-family: var(--role-font);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.student-form input,
+.student-form select,
+.faculty-portal input,
+.hod-login-box input,
+.admin-form input {
+  color: var(--role-text);
+  font-family: var(--role-font);
+  font-size: 14px;
+  border-color: var(--role-border);
+}
+
+.student-form input:focus,
+.student-form select:focus,
+.faculty-portal input:focus,
+.hod-login-box input:focus,
+.admin-form input:focus {
+  border-color: var(--role-accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.student-form form button,
+.faculty-portal .faculty-portal-btn,
+.hod-login-box form button,
+.admin-form button {
+  border: 1px solid var(--role-primary);
+  border-radius: 7px;
+  background: var(--role-primary);
+  color: var(--role-surface);
+  font-family: var(--role-font);
+  font-size: 14px;
+  font-weight: 700;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.student-form form button:hover,
+.faculty-portal .faculty-portal-btn:hover,
+.hod-login-box form button:hover,
+.admin-form button:hover {
+  border-color: var(--role-accent);
+  background: var(--role-accent);
+  color: var(--role-surface);
+  transform: translateY(-1px);
+}
+
+.student-secondary-btn {
+  border-color: var(--role-primary);
+  color: var(--role-primary);
+  font-family: var(--role-font);
+  font-size: 14px;
+}
+
+.student-secondary-btn:hover {
+  background: var(--role-accent-soft);
+  color: var(--role-primary);
+}
+
+.student-header h1,
+.fac-page-heading,
+.hod-header h1,
+.admin-dashboard .greeting h1 {
+  color: var(--role-primary);
+  font-family: var(--role-font);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.student-dashboard .nav-item,
+.admin-dashboard .nav-item,
+.faculty-dashboard-layout .fac-nav-item,
+.hod-layout .hod-nav-item {
+  font-family: var(--role-font);
+  font-size: 14px;
+}
+
+.student-dashboard .nav-item:hover,
+.admin-dashboard .nav-item:hover,
+.faculty-dashboard-layout .fac-nav-item:hover,
+.hod-layout .hod-nav-item:hover {
+  background: var(--role-accent-soft);
+  color: var(--role-accent);
+  transform: translateX(2px);
+}
+
+.student-dashboard .nav-item.active,
+.admin-dashboard .nav-item.active,
+.faculty-dashboard-layout .fac-nav-item.active,
+.hod-layout .hod-nav-item.active {
+  border-color: var(--role-primary);
+  background: var(--role-primary);
+  color: var(--role-surface);
+  box-shadow: none;
+}
+
+.hod-layout .hod-sidebar {
+  border-right: 1px solid var(--role-border);
+  background: var(--role-surface);
+  color: var(--role-text);
+}
+
+.hod-layout .hod-brand,
+.hod-layout .hod-sidebar-bottom {
+  border-color: var(--role-border);
+}
+
+.hod-layout .hod-brand-logo,
+.hod-layout .hod-sidebar-avatar {
+  background: var(--role-primary);
+  color: var(--role-surface);
+}
+
+.hod-layout .hod-brand h2,
+.hod-layout .hod-nav-title {
+  color: var(--role-primary);
+}
+
+.hod-layout .hod-brand span,
+.hod-layout .hod-sidebar-profile-text span {
+  color: var(--role-muted);
+}
+
+.hod-layout .hod-nav-item,
+.hod-layout .hod-profile-link {
+  color: var(--role-muted);
+}
+
+.hod-layout .hod-profile-link:hover,
+.hod-layout .hod-profile-link.active {
+  background: var(--role-accent-soft);
+  color: var(--role-primary);
+}
+
+.hod-layout .add-student-btn,
+.hod-layout .add-faculty-btn,
+.hod-layout .create-announcement-btn,
+.hod-layout .generate-report-btn,
+.hod-layout .edit-profile-btn,
+.hod-layout .attendance-export-btn {
+  border-color: var(--role-primary);
+  background: var(--role-primary);
+  color: var(--role-surface);
+  font-family: var(--role-font);
+}
+
+.hod-layout .add-student-btn:hover,
+.hod-layout .add-faculty-btn:hover,
+.hod-layout .create-announcement-btn:hover,
+.hod-layout .generate-report-btn:hover,
+.hod-layout .edit-profile-btn:hover,
+.hod-layout .attendance-export-btn:hover {
+  border-color: var(--role-accent);
+  background: var(--role-accent);
+  color: var(--role-surface);
+}
+
+.faculty-dashboard-layout .fac-btn.primary,
+.faculty-dashboard-layout .fac-top-action-btn.primary,
+.student-dashboard .add-task-button,
+.student-dashboard .save-task-button {
+  border-color: var(--role-primary);
+  background: var(--role-primary);
+  color: var(--role-surface);
+  font-family: var(--role-font);
+  font-size: 14px;
+}
+
+.faculty-dashboard-layout .fac-btn.primary:hover,
+.faculty-dashboard-layout .fac-top-action-btn.primary:hover,
+.student-dashboard .add-task-button:hover,
+.student-dashboard .save-task-button:hover {
+  border-color: var(--role-accent);
+  background: var(--role-accent);
+  color: var(--role-surface);
+}
+
+.student-login-page button:focus-visible,
+.faculty-page button:focus-visible,
+.hod-section button:focus-visible,
+.admin-login-page button:focus-visible,
+.role-page .role-card:focus-visible,
+.student-dashboard button:focus-visible,
+.faculty-dashboard-layout button:focus-visible,
+.hod-layout button:focus-visible,
+.admin-dashboard button:focus-visible {
+  outline: 2px solid var(--role-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .role-page .title {
+    font-size: 28px;
+  }
+
+  .student-login-page > h1,
+  .faculty-title,
+  .hod-title h1,
+  .admin-login-title h1 {
+    font-size: 28px;
+  }
+
+  .student-header h1,
+  .fac-page-heading,
+  .hod-header h1,
+  .admin-dashboard .greeting h1 {
+    font-size: 20px;
+  }
+}

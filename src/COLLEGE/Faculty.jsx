@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./Faculty.css";
+import FacultyDashboard from "./faculty/FacultyDashboard";
 
 function Faculty() {
 
@@ -82,6 +83,7 @@ function Faculty() {
     }
 
     alert("Login successful!");
+    setPage("dashboard");
 
   }
 
@@ -115,6 +117,10 @@ function Faculty() {
 
 
   return (
+
+    page === "dashboard" ? (
+      <FacultyDashboard onLogout={() => setPage("portal")} />
+    ) : (
 
     <div className="faculty-page">
 
@@ -371,6 +377,8 @@ function Faculty() {
       </div>
 
     </div>
+
+    )
   );
 }
 

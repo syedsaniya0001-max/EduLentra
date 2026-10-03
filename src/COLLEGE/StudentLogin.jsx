@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./StudentLogin.css";
 
 import bookCover from "../assets/BOOK-NEW.png";
@@ -6,6 +7,7 @@ import goldKey from "../assets/key.png";
 import paper from "../assets/paper.png";
 
 function StudentLogin() {
+    const navigate = useNavigate();
 
     /* =========================
        BOOK STATES

@@ -1,0 +1,24 @@
+.hod-layout {
+  min-height: 100vh;
+  display: flex;
+  background: #f5f7fb;
+}
+
+.hod-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hod-content {
+  flex: 1;
+  padding: 30px;
+  overflow-x: hidden;
+}
+
+@media (max-width: 768px) {
+  .hod-content {
+    padding: 20px;
+  }
+}

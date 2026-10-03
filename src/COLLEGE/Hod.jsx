@@ -1,8 +1,41 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Hod.css";
 
 function Hod() {
+  const navigate = useNavigate();
   const [showLogin, setShowLogin] = useState(true);
+  const [loginData, setLoginData] = useState({ id: "", password: "" });
+  const [signupData, setSignupData] = useState({
+    name: "",
+    id: "",
+    department: "",
+    email: "",
+    password: ""
+  });
+
+  const handleLogin = (event) => {
+    event.preventDefault();
+
+    if (!loginData.id.trim() || !loginData.password.trim()) {
+      alert("Please enter your HoD ID and password.");
+      return;
+    }
+
+    navigate("/hod/dashboard");
+  };
+
+  const handleSignup = (event) => {
+    event.preventDefault();
+
+    if (Object.values(signupData).some((value) => !value.trim())) {
+      alert("Please fill in all registration details.");
+      return;
+    }
+
+    alert("HOD registration request sent for approval.");
+    setShowLogin(true);
+  };
 
   return (
     <section className="hod-section">
@@ -53,17 +86,27 @@ function Hod() {
               <h2>HoD Login</h2>
               <p>Access your department portal</p>
 
-              <input
-                type="text"
-                placeholder="HoD ID"
-              />
+              <form onSubmit={handleLogin}>
+                <input
+                  type="text"
+                  placeholder="HoD ID"
+                  value={loginData.id}
+                  onChange={(event) =>
+                    setLoginData({ ...loginData, id: event.target.value })
+                  }
+                />
 
-              <input
-                type="password"
-                placeholder="Password"
-              />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={loginData.password}
+                  onChange={(event) =>
+                    setLoginData({ ...loginData, password: event.target.value })
+                  }
+                />
 
-              <button>Login</button>
+                <button type="submit">Login</button>
+              </form>
 
               <span>
                 Don't have an account?
@@ -77,32 +120,54 @@ function Hod() {
               <h2>Create HoD Account</h2>
               <p>Register your department account</p>
 
-              <input
-                type="text"
-                placeholder="Full Name"
-              />
+              <form onSubmit={handleSignup}>
+                <input
+                  type="text"
+                  placeholder="Full Name"
+                  value={signupData.name}
+                  onChange={(event) =>
+                    setSignupData({ ...signupData, name: event.target.value })
+                  }
+                />
 
-              <input
-                type="text"
-                placeholder="HoD ID"
-              />
+                <input
+                  type="text"
+                  placeholder="HoD ID"
+                  value={signupData.id}
+                  onChange={(event) =>
+                    setSignupData({ ...signupData, id: event.target.value })
+                  }
+                />
 
-              <input
-                type="text"
-                placeholder="Department"
-              />
+                <input
+                  type="text"
+                  placeholder="Department"
+                  value={signupData.department}
+                  onChange={(event) =>
+                    setSignupData({ ...signupData, department: event.target.value })
+                  }
+                />
 
-              <input
-                type="email"
-                placeholder="Email"
-              />
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={signupData.email}
+                  onChange={(event) =>
+                    setSignupData({ ...signupData, email: event.target.value })
+                  }
+                />
 
-              <input
-                type="password"
-                placeholder="Password"
-              />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={signupData.password}
+                  onChange={(event) =>
+                    setSignupData({ ...signupData, password: event.target.value })
+                  }
+                />
 
-              <button>Sign Up</button>
+                <button type="submit">Sign Up</button>
+              </form>
 
               <span>
                 Already have an account?
