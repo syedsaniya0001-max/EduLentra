@@ -29,7 +29,7 @@ import "./role-theme.css";
 
 function Mainc() {
   return (
-    <Router>
+    <Router basename="/EduLentra">
       <Routes>
 
         {/* Main Pages */}
