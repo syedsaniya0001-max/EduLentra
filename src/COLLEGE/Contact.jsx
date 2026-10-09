@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import "./Contact.css";
 
 function Contact() {
@@ -49,7 +50,7 @@ function Contact() {
 
         <div>
           <h4>Quick Links</h4>
-          <p><a href="/">Home</a> | <a href="/about">About</a> | <a href="/highlights">Highlights</a> | <a href="/contact">Contact</a></p>
+          <p><Link to="/">Home</Link> | <Link to="/about">About</Link> | <Link to="/highlights">Highlights</Link> | <Link to="/contact">Contact</Link></p>
         </div>
 
         <div>

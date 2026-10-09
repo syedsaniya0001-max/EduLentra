@@ -99,18 +99,18 @@ function Home() {
                     </a>
 
 
-                      <a href="/about" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+                      <Link to="/about" target="_blank" rel="noopener noreferrer" style={linkStyle}>
     About
-</a>
+</Link>
 
 
-                   <a href="/highlights" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+                   <Link to="/highlights" target="_blank" rel="noopener noreferrer" style={linkStyle}>
     Highlights
-</a>
+</Link>
 
-                 <a href="/gallery" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+                 <Link to="/gallery" target="_blank" rel="noopener noreferrer" style={linkStyle}>
     Gallery
-</a>
+</Link>
 
 
                   <div className="login-dropdown">
@@ -145,9 +145,9 @@ function Home() {
 
 </div>
 
-<a href="/contact" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+<Link to="/contact" target="_blank" rel="noopener noreferrer" style={linkStyle}>
     Contact
-</a>
+</Link>
 
                     {/* <Link
                         to="/role"
