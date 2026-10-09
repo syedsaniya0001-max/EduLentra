@@ -99,16 +99,16 @@ function Home() {
                     </a>
 
 
-                      <Link to="/about" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+                      <Link to="/about" style={linkStyle}>
     About
 </Link>
 
 
-                   <Link to="/highlights" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+                   <Link to="/highlights" style={linkStyle}>
     Highlights
 </Link>
 
-                 <Link to="/gallery" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+                 <Link to="/gallery" style={linkStyle}>
     Gallery
 </Link>
 
@@ -145,7 +145,7 @@ function Home() {
 
 </div>
 
-<Link to="/contact" target="_blank" rel="noopener noreferrer" style={linkStyle}>
+<Link to="/contact" style={linkStyle}>
     Contact
 </Link>
 
