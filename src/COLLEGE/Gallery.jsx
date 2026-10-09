@@ -11,8 +11,10 @@ import homeimg5 from "../assets/homeimg5.jpg";
 
 function Gallery() {
 
+  const navigate = useNavigate();
+
   const openGallery = (type) => {
-    window.open(`/gallery/${type}`, "_blank");
+    navigate(`/gallery/${type}`);
   };
 
   return (
