@@ -36,72 +36,29 @@ export default function FacultyOverview({ faculty, onNavigate }) {
   return (
     <div className="fac-overview-container">
       {/* Banner */}
-      <div
-        style={{
-          background: "linear-gradient(135deg, #1e3a8a, #2563eb)",
-          borderRadius: "16px",
-          padding: "24px 28px",
-          color: "white",
-          marginBottom: "24px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "16px",
-          boxShadow: "0 8px 20px rgba(37, 99, 235, 0.2)"
-        }}
-      >
+      <div className="fac-overview-banner">
         <div>
-          <span
-            style={{
-              fontSize: "12px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-              background: "rgba(255,255,255,0.2)",
-              padding: "4px 10px",
-              borderRadius: "9999px"
-            }}
-          >
+          <span className="fac-session-badge">
             Academic Session 2026 - Odd Semester
           </span>
-          <h2 style={{ fontSize: "24px", fontWeight: 800, margin: "10px 0 4px 0" }}>
+          <h2 className="fac-overview-title">
             Welcome back, {faculty?.name || "Professor"}! 🎓
           </h2>
-          <p style={{ margin: 0, opacity: 0.9, fontSize: "14px" }}>
+          <p className="fac-overview-subtitle">
             {faculty?.department || "Department of Computer Science & Engineering"} | {faculty?.designation || "Faculty Advisor"}
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div className="fac-overview-actions">
           <button
             onClick={() => onNavigate("attendance")}
-            style={{
-              background: "white",
-              color: "#1e3a8a",
-              border: "none",
-              padding: "10px 18px",
-              borderRadius: "8px",
-              fontWeight: 700,
-              fontSize: "13.5px",
-              cursor: "pointer",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.1)"
-            }}
+            className="fac-overview-button"
           >
             📅 Mark Attendance
           </button>
           <button
             onClick={() => onNavigate("outpass")}
-            style={{
-              background: stats.pendingOutpasses > 0 ? "#ef4444" : "rgba(255,255,255,0.15)",
-              color: "white",
-              border: "none",
-              padding: "10px 18px",
-              borderRadius: "8px",
-              fontWeight: 700,
-              fontSize: "13.5px",
-              cursor: "pointer"
-            }}
+            className={`fac-overview-button ${stats.pendingOutpasses > 0 ? "has-pending" : ""}`}
           >
             🎫 Outpasses ({stats.pendingOutpasses} Pending)
           </button>
@@ -206,11 +163,11 @@ export default function FacultyOverview({ faculty, onNavigate }) {
                 }}
               >
                 <div>
-                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#2563eb" }}>{item.time}</div>
-                  <div style={{ fontSize: "14.5px", fontWeight: 700, color: "#0f172a", marginTop: "3px" }}>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#2563eb" }}>{item.time}</div>
+                  <div style={{ fontSize: "15px", fontWeight: 700, color: "#172033", marginTop: "3px" }}>
                     {item.subject}
                   </div>
-                  <div style={{ fontSize: "12.5px", color: "#64748b", marginTop: "2px" }}>
+                  <div style={{ fontSize: "13px", color: "#64748b", marginTop: "2px" }}>
                     {item.class} • <span style={{ fontWeight: 600 }}>{item.room}</span>
                   </div>
                 </div>
@@ -239,7 +196,7 @@ export default function FacultyOverview({ faculty, onNavigate }) {
             <h3 className="fac-card-title">
               <span>⚡</span> Recent System Activity
             </h3>
-            <span style={{ fontSize: "12px", color: "#64748b" }}>Live</span>
+            <span style={{ fontSize: "13px", color: "#64748b" }}>Live</span>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
@@ -274,10 +231,10 @@ export default function FacultyOverview({ faculty, onNavigate }) {
                     : "📅"}
                 </div>
                 <div>
-                  <div style={{ fontSize: "13px", fontWeight: 600, color: "#1e293b", lineHeight: 1.4 }}>
+                  <div style={{ fontSize: "14px", fontWeight: 600, color: "#172033", lineHeight: 1.5 }}>
                     {act.text}
                   </div>
-                  <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "2px" }}>{act.time}</div>
+                  <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>{act.time}</div>
                 </div>
               </div>
             ))}

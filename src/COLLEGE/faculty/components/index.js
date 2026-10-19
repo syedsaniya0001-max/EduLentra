@@ -6,3 +6,4 @@ export { default as FacultyProfile } from "./FacultyProfile";
 export { default as NotesManagement } from "./NotesManagement";
 export { default as OutpassApproval } from "./OutpassApproval";
 export { default as StudentList } from "./StudentList";
+export { default as StudentSignupApprovals } from "./StudentSignupApprovals";

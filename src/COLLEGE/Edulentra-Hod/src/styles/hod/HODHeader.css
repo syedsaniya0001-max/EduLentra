@@ -15,14 +15,14 @@
 
 /* Left */
 
-.header-left h1 {
+.hod-layout .header-left h1 {
   margin: 0;
   color: #111827;
   font-size: 21px;
   font-weight: 700;
 }
 
-.header-left p {
+.hod-layout .header-left p {
   margin: 5px 0 0;
   color: #6b7280;
   font-size: 13px;
@@ -30,7 +30,7 @@
 
 /* Right */
 
-.header-right {
+.hod-layout .header-right {
   display: flex;
   align-items: center;
   gap: 18px;
@@ -38,7 +38,7 @@
 
 /* Notification */
 
-.header-icon-button {
+.hod-layout .header-icon-button {
   width: 42px;
   height: 42px;
   border: 1px solid #e5e7eb;
@@ -51,11 +51,11 @@
   position: relative;
 }
 
-.header-icon-button:hover {
+.hod-layout .header-icon-button:hover {
   background: #f9fafb;
 }
 
-.notification-dot {
+.hod-layout .notification-dot {
   position: absolute;
   width: 8px;
   height: 8px;
@@ -67,7 +67,7 @@
 
 /* Profile */
 
-.header-profile {
+.hod-layout .header-profile {
   border: none;
   background: transparent;
 
@@ -79,7 +79,7 @@
   padding: 5px;
 }
 
-.header-avatar {
+.hod-layout .header-avatar {
   width: 40px;
   height: 40px;
 
@@ -94,25 +94,95 @@
   font-weight: 700;
 }
 
-.header-profile-info {
+.hod-layout .header-profile-info {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 3px;
 }
 
-.header-profile-info strong {
+.hod-layout .header-profile-info strong {
   color: #111827;
   font-size: 14px;
 }
 
-.header-profile-info span {
+.hod-layout .header-profile-info span {
   color: #6b7280;
   font-size: 11px;
 }
 
-.profile-arrow {
+.hod-layout .profile-arrow {
   color: #6b7280;
   font-size: 18px;
   margin-left: 4px;
+}
+
+.hod-layout .hod-header {
+  min-height: 125px;
+  height: auto;
+  margin: 28px 28px 0;
+  padding: 25px 30px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(23, 59, 114, 0.07);
+  position: static;
+}
+
+.hod-layout .header-left h1 {
+  color: #173b72;
+  font-size: 27px;
+}
+
+.hod-layout .header-left p {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.hod-layout .header-right {
+  gap: 12px;
+}
+
+.hod-layout .header-icon-button {
+  width: 42px;
+  height: 42px;
+  border-color: #e2e8f0;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #173b72;
+}
+
+.hod-layout .header-icon-button:hover {
+  border-color: #dbeafe;
+  background: #eff6ff;
+}
+
+.hod-layout .header-avatar {
+  border: 3px solid #dbeafe;
+  background: #eff6ff;
+  color: #173b72;
+}
+
+.hod-layout .header-profile-info strong {
+  color: #172033;
+}
+
+.hod-layout .header-profile-info span,
+.hod-layout .profile-arrow {
+  color: #64748b;
+}
+
+@media (max-width: 700px) {
+  .hod-layout .hod-header {
+    min-height: 0;
+    margin: 15px 15px 0;
+    padding: 20px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .hod-layout .header-right {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
 }

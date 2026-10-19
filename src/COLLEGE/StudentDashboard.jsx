@@ -1,6 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { clearAuthSession } from "../api/authSession";
+import { announcementsApi } from "../api/announcementsApi";
 import "./StudentDashboard.css";
+import PortalBackButton from "./PortalBackButton";
 
 
 /* =========================================================
@@ -285,6 +288,11 @@ const formatDisplayDate = (dateKey) => {
 
 function StudentDashboard() {
     const navigate = useNavigate();
+    const handleLogout = () => {
+        clearAuthSession();
+        navigate("/student", { replace: true });
+    };
+    const sectionHistory = useRef([]);
 
     /* =====================================================
        GENERAL DASHBOARD STATE
@@ -292,6 +300,9 @@ function StudentDashboard() {
 
     const [activeSection, setActiveSection] =
         useState("dashboard");
+    const [announcements, setAnnouncements] = useState([]);
+    const [isLoadingAnnouncements, setIsLoadingAnnouncements] = useState(true);
+    const [announcementError, setAnnouncementError] = useState("");
 
     const [complaint, setComplaint] =
         useState("");
@@ -442,15 +453,69 @@ function StudentDashboard() {
 
     }, [tasks]);
 
+    useEffect(() => {
+        let cancelled = false;
+        let requestId = 0;
+        let hasLoaded = false;
+
+        const refreshAnnouncements = async () => {
+            const currentRequestId = ++requestId;
+            if (!hasLoaded) setIsLoadingAnnouncements(true);
+            try {
+                const items = await announcementsApi.getAll();
+                if (!cancelled && currentRequestId === requestId) {
+                    setAnnouncements(items);
+                    setAnnouncementError("");
+                }
+            } catch (error) {
+                if (!cancelled && currentRequestId === requestId) {
+                    setAnnouncementError(error.message || "Unable to load announcements.");
+                }
+            } finally {
+                if (!cancelled && currentRequestId === requestId) {
+                    hasLoaded = true;
+                    setIsLoadingAnnouncements(false);
+                }
+            }
+        };
+
+        const unsubscribe = announcementsApi.subscribeToAnnouncementUpdates(
+            () => refreshAnnouncements(),
+            () => {
+                if (!cancelled) {
+                    setAnnouncementError("Live updates are unavailable. Refresh to check for new announcements.");
+                }
+            }
+        );
+        void refreshAnnouncements();
+
+        return () => {
+            cancelled = true;
+            unsubscribe();
+        };
+    }, []);
+
 
     /* =====================================================
        MENU
     ===================================================== */
 
     const handleMenuClick = (section) => {
-
+        if (section === activeSection) {
+            return;
+        }
+        sectionHistory.current.push(activeSection);
         setActiveSection(section);
+    };
 
+    const handleSectionBack = () => {
+        if (activeSection !== "dashboard" || sectionHistory.current.length > 0) {
+            const previousSection = sectionHistory.current.pop() || "dashboard";
+            setActiveSection(previousSection);
+            return true;
+        }
+
+        return false;
     };
 
 
@@ -925,15 +990,13 @@ const handleAddTask = (e) => {
 
 
 
-                    {/* HOME */}
-
                     <button
                         className="nav-item"
-                        onClick={() => navigate("/")}
+                        onClick={handleLogout}
                     >
-                        🏡
+                        ↪
                         <span>
-                            Home
+                            Log Out
                         </span>
                     </button>
 
@@ -1169,6 +1232,11 @@ const handleAddTask = (e) => {
             ================================================= */}
 
             <main className="student-main">
+                <PortalBackButton
+                    role="student"
+                    fallbackTo="/student"
+                    onBack={handleSectionBack}
+                />
 
 
                 {/* =================================================
@@ -1191,6 +1259,8 @@ const handleAddTask = (e) => {
 
                     </div>
 
+
+                    <div className="student-header-actions">
 
                     <div className="attendance-card">
 
@@ -1246,6 +1316,17 @@ const handleAddTask = (e) => {
                             </button>
 
                         </div>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        className="student-home-button"
+                        onClick={() => navigate("/")}
+                        aria-label="College Home"
+                    >
+                        🏠 <span>College Home</span>
+                    </button>
 
                     </div>
 
@@ -1874,7 +1955,7 @@ const handleAddTask = (e) => {
                             <div>
                                 📢
                                 <span>
-                                    3 New Announcements
+                                    {announcements.length} Announcements
                                 </span>
                             </div>
 
@@ -2343,49 +2424,29 @@ const handleAddTask = (e) => {
                             📢 Announcements
                         </h2>
 
+                        {announcementError && (
+                            <p role="alert">{announcementError}</p>
+                        )}
+
                         <div className="announcement-list">
-
-                            <div>
-
-                                <b>
-                                    📌 Internal Exams
-                                </b>
-
-                                <p>
-                                    Internal examinations
-                                    will begin next week.
-                                </p>
-
-                            </div>
-
-
-                            <div>
-
-                                <b>
-                                    📌 Hackathon
-                                </b>
-
-                                <p>
-                                    Registration for the
-                                    upcoming hackathon is open.
-                                </p>
-
-                            </div>
-
-
-                            <div>
-
-                                <b>
-                                    📌 Placement Drive
-                                </b>
-
-                                <p>
-                                    New placement opportunities
-                                    are available.
-                                </p>
-
-                            </div>
-
+                            {isLoadingAnnouncements ? (
+                                <p>Loading announcements...</p>
+                            ) : announcements.length ? (
+                                announcements.map((announcement) => (
+                                    <article key={announcement.id}>
+                                        <b>📌 {announcement.title}</b>
+                                        <p>{announcement.message}</p>
+                                        <small>
+                                            {announcement.category} · {announcement.priority} priority · {announcement.date}
+                                            {announcement.createdByName
+                                                ? ` · By ${announcement.createdByName}`
+                                                : ""}
+                                        </small>
+                                    </article>
+                                ))
+                            ) : (
+                                <p>No announcements have been published for you yet.</p>
+                            )}
                         </div>
 
                     </section>

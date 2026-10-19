@@ -1,15 +1,19 @@
+
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import "./Faculty.css";
 import FacultyDashboard from "./faculty/FacultyDashboard";
+import { facultyApi } from "../api/facultyApi";
+import PortalBackButton from "./PortalBackButton";
 
 function Faculty() {
-
   const message = "Welcome Faculty";
 
   const [text, setText] = useState(message);
   const [moveDuster, setMoveDuster] = useState(false);
   const [showPortal, setShowPortal] = useState(false);
   const [page, setPage] = useState("portal");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [loginData, setLoginData] = useState({
     email: "",
@@ -28,141 +32,159 @@ function Faculty() {
 
   // Blackboard animation
   useEffect(() => {
+    let eraseTimer;
+    let revealTimer;
 
     const startTimer = setTimeout(() => {
-
       setMoveDuster(true);
 
       let index = 0;
 
-      const eraseTimer = setInterval(() => {
-
+      eraseTimer = setInterval(() => {
         index++;
-
         setText(message.substring(index));
 
         if (index >= message.length) {
-
           clearInterval(eraseTimer);
 
-          setTimeout(() => {
+          revealTimer = setTimeout(() => {
             setShowPortal(true);
           }, 500);
         }
-
       }, 120);
-
     }, 2000);
 
-    return () => clearTimeout(startTimer);
-
+    return () => {
+      clearTimeout(startTimer);
+      clearInterval(eraseTimer);
+      clearTimeout(revealTimer);
+    };
   }, []);
 
-
-  // LOGIN
-  function handleLogin(e) {
-
+  // FACULTY LOGIN
+  async function handleLogin(e) {
     e.preventDefault();
 
-    const emailPattern =
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (isSubmitting) return;
 
-    const passwordPattern =
-      /^(?=.*[A-Z])(?=.*[0-9]).{8,}$/;
+    const identifier = loginData.email.trim();
 
-    if (!emailPattern.test(loginData.email)) {
-      alert("Enter a valid faculty email.");
+    if (!identifier || !loginData.password) {
+      alert("Please enter your Faculty ID/email and password.");
       return;
     }
 
-    if (!passwordPattern.test(loginData.password)) {
-      alert(
-        "Password must contain at least 8 characters, one capital letter and one number."
-      );
-      return;
+    setIsSubmitting(true);
+
+    try {
+      await facultyApi.login(identifier, loginData.password);
+
+      setPage("dashboard");
+    } catch (error) {
+      alert(error.message || "Login failed. Check your credentials.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    alert("Login successful!");
-    setPage("dashboard");
-
   }
 
-
-  // SIGN UP
-  function handleSignup(e) {
-
+  // FACULTY SIGNUP
+  async function handleSignup(e) {
     e.preventDefault();
 
+    if (isSubmitting) return;
+
     if (
-      !signupData.name ||
-      !signupData.id ||
-      !signupData.email ||
-      !signupData.department ||
-      !signupData.subject ||
-      !signupData.branch ||
+      !signupData.name.trim() ||
+      !signupData.id.trim() ||
+      !signupData.email.trim() ||
+      !signupData.department.trim() ||
+      !signupData.subject.trim() ||
+      !signupData.branch.trim() ||
       !signupData.password
     ) {
       alert("Please fill all the details.");
       return;
     }
 
-    alert(
-      "Faculty registration request sent to HOD/Admin for approval."
-    );
+    if (signupData.password.length < 8) {
+      alert("Password must be at least 8 characters long.");
+      return;
+    }
 
-    // After submitting, return to access page
-    setPage("portal");
+    setIsSubmitting(true);
 
+    try {
+      await facultyApi.signup({
+        name: signupData.name.trim(),
+        id: signupData.id.trim(),
+        email: signupData.email.trim(),
+        department: signupData.department.trim(),
+        subject: signupData.subject.trim(),
+        branch: signupData.branch.trim(),
+        password: signupData.password
+      });
+
+      alert(
+        "Faculty registration request submitted. Please wait for HOD approval."
+      );
+
+      setSignupData({
+        name: "",
+        id: "",
+        email: "",
+        department: "",
+        subject: "",
+        branch: "",
+        password: ""
+      });
+
+      setPage("portal");
+    } catch (error) {
+      alert(error.message || "Unable to submit Faculty registration.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
+  function handleLogout() {
+    facultyApi.logout();
+    setLoginData({ email: "", password: "" });
+    setPage("portal");
+  }
 
-  return (
-
-    page === "dashboard" ? (
-      <FacultyDashboard onLogout={() => setPage("portal")} />
-    ) : (
-
+  return page === "dashboard" ? (
+    <FacultyDashboard onLogout={handleLogout} />
+  ) : (
     <div className="faculty-page">
-
-      <h1 className="faculty-title">
-        EduLentra Faculty Portal
-      </h1>
-
+      <PortalBackButton
+        role="faculty"
+        fallbackTo="/role"
+        show={page === "portal"}
+      />
+      <h1 className="faculty-title">EduLentra Faculty Portal</h1>
 
       <div className="faculty-blackboard">
-
         {!showPortal ? (
-
           <>
-            <div className="faculty-chalk-text">
-              {text}
-            </div>
+            <div className="faculty-chalk-text">{text}</div>
 
             <div
-              className={`faculty-duster ${
-                moveDuster ? "move" : ""
-              }`}
-            ></div>
+              className={`faculty-duster ${moveDuster ? "move" : ""}`}
+            />
 
             <div className="faculty-chalk-tray">
-
-              <div className="faculty-chalk"></div>
-
+              <div className="faculty-chalk" />
             </div>
           </>
-
         ) : (
-
           <>
-
             {/* MAIN ACCESS */}
             {page === "portal" && (
-
               <div className="faculty-portal">
-
                 <h2>Faculty Access</h2>
 
                 <button
+                  type="button"
                   className="faculty-portal-btn"
                   onClick={() => setPage("login")}
                 >
@@ -170,30 +192,27 @@ function Faculty() {
                 </button>
 
                 <button
+                  type="button"
                   className="faculty-portal-btn"
                   onClick={() => setPage("signup")}
                 >
                   Sign Up
                 </button>
-
               </div>
-
             )}
-
 
             {/* LOGIN */}
             {page === "login" && (
-
               <div className="faculty-portal">
-
                 <h2>Faculty Login</h2>
 
                 <form onSubmit={handleLogin}>
-
                   <input
-                    type="email"
-                    placeholder="Faculty Email"
+                    type="text"
+                    placeholder="Faculty ID"
+                    autoComplete="username"
                     value={loginData.email}
+                    required
                     onChange={(e) =>
                       setLoginData({
                         ...loginData,
@@ -205,7 +224,9 @@ function Faculty() {
                   <input
                     type="password"
                     placeholder="Password"
+                    autoComplete="current-password"
                     value={loginData.password}
+                    required
                     onChange={(e) =>
                       setLoginData({
                         ...loginData,
@@ -214,18 +235,26 @@ function Faculty() {
                     }
                   />
 
+                  <Link
+                    className="password-recovery-link"
+                    to="/forgot-password?role=faculty"
+                  >
+                    Forgot Password?
+                  </Link>
+
                   <button
                     className="faculty-portal-btn"
                     type="submit"
+                    disabled={isSubmitting}
                   >
-                    Login
+                    {isSubmitting ? "Logging in..." : "Login"}
                   </button>
-
                 </form>
 
                 <p className="faculty-switch-text">
-                  Don't have an account?
+                  Don't have an account?{" "}
                   <button
+                    type="button"
                     className="faculty-link-btn"
                     onClick={() => setPage("signup")}
                   >
@@ -234,30 +263,27 @@ function Faculty() {
                 </p>
 
                 <button
-                  className="faculty-back-btn"
+                  type="button"
+                  className="faculty-back-btn portal-back-button"
                   onClick={() => setPage("portal")}
                 >
                   ← Back
                 </button>
-
               </div>
-
             )}
 
-
-            {/* SIGN UP */}
+            {/* SIGNUP */}
             {page === "signup" && (
-
               <div className="faculty-portal signup-portal">
-
                 <h2>Faculty Registration</h2>
 
                 <form onSubmit={handleSignup}>
-
                   <input
                     type="text"
                     placeholder="Faculty Name"
+                    autoComplete="name"
                     value={signupData.name}
+                    required
                     onChange={(e) =>
                       setSignupData({
                         ...signupData,
@@ -270,6 +296,7 @@ function Faculty() {
                     type="text"
                     placeholder="Faculty ID"
                     value={signupData.id}
+                    required
                     onChange={(e) =>
                       setSignupData({
                         ...signupData,
@@ -281,7 +308,9 @@ function Faculty() {
                   <input
                     type="email"
                     placeholder="Faculty Email"
+                    autoComplete="email"
                     value={signupData.email}
+                    required
                     onChange={(e) =>
                       setSignupData({
                         ...signupData,
@@ -294,6 +323,7 @@ function Faculty() {
                     type="text"
                     placeholder="Department"
                     value={signupData.department}
+                    required
                     onChange={(e) =>
                       setSignupData({
                         ...signupData,
@@ -306,6 +336,7 @@ function Faculty() {
                     type="text"
                     placeholder="Subject / Subjects Handled"
                     value={signupData.subject}
+                    required
                     onChange={(e) =>
                       setSignupData({
                         ...signupData,
@@ -318,6 +349,7 @@ function Faculty() {
                     type="text"
                     placeholder="Class / Branch Handled"
                     value={signupData.branch}
+                    required
                     onChange={(e) =>
                       setSignupData({
                         ...signupData,
@@ -328,8 +360,11 @@ function Faculty() {
 
                   <input
                     type="password"
-                    placeholder="Create Password"
+                    placeholder="Create Password (minimum 8 characters)"
+                    autoComplete="new-password"
+                    minLength={8}
                     value={signupData.password}
+                    required
                     onChange={(e) =>
                       setSignupData({
                         ...signupData,
@@ -341,44 +376,25 @@ function Faculty() {
                   <button
                     className="faculty-portal-btn"
                     type="submit"
+                    disabled={isSubmitting}
                   >
-                    Send Request
+                    {isSubmitting ? "Submitting..." : "Send Request"}
                   </button>
-
-                </form>
-
-
-                <p className="faculty-switch-text">
-                  Already have an account?
 
                   <button
-                    className="faculty-link-btn"
+                    type="button"
+                    className="faculty-back-btn portal-back-button"
                     onClick={() => setPage("login")}
                   >
-                    Login
+                    ← Back to Login
                   </button>
-                </p>
-
-                <button
-                  className="faculty-back-btn"
-                  onClick={() => setPage("portal")}
-                >
-                  ← Back
-                </button>
-
+                </form>
               </div>
-
             )}
-
           </>
-
         )}
-
       </div>
-
     </div>
-
-    )
   );
 }
 

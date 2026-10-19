@@ -8,6 +8,26 @@
   --role-muted: #64748b;
   --role-border: #e2e8f0;
   --role-font: Arial, Helvetica, sans-serif;
+  --role-page-padding: 28px;
+  --role-section-gap: 24px;
+  --role-card-padding: 20px;
+  --role-control-gap: 12px;
+  --role-radius-control: 8px;
+  --role-radius-card: 12px;
+  --role-shadow-card: 0 5px 16px rgba(15, 23, 42, 0.06);
+  --role-button-height: 40px;
+}
+
+.college-app {
+  width: 100%;
+  min-height: 100vh;
+  color: var(--role-text);
+  font-family: var(--role-font);
+  color-scheme: light;
+}
+
+.college-app :is(button, input, select, textarea) {
+  font-family: var(--role-font);
 }
 
 .student-login-page,
@@ -203,9 +223,9 @@
 .admin-dashboard .nav-item.active,
 .faculty-dashboard-layout .fac-nav-item.active,
 .hod-layout .hod-nav-item.active {
-  border-color: var(--role-primary);
-  background: var(--role-primary);
-  color: var(--role-surface);
+  border-color: var(--role-border);
+  background: var(--role-accent-soft);
+  color: var(--role-primary);
   box-shadow: none;
 }
 
@@ -303,7 +323,403 @@
   outline-offset: 2px;
 }
 
+.portal-back-button {
+  min-height: var(--role-button-height);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--role-border);
+  border-radius: var(--role-radius-control);
+  background: var(--role-accent-soft);
+  color: var(--role-primary);
+  font-family: var(--role-font);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.portal-back-button:hover {
+  border-color: var(--role-primary);
+  background: var(--role-primary);
+  color: var(--role-surface);
+  transform: translateX(-2px);
+}
+
+.portal-back-button:focus-visible {
+  outline: 3px solid var(--role-accent);
+  outline-offset: 3px;
+}
+
+.role-page-back-btn {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  z-index: 1000;
+}
+
+.role-page > .portal-back-button {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+}
+
+.student-login-page,
+.faculty-page,
+.hod-section,
+.admin-login-page {
+  position: relative;
+}
+
+.student-login-page > .portal-back-button,
+.faculty-page > .portal-back-button,
+.hod-section > .portal-back-button,
+.admin-login-page > .portal-back-button {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+}
+
+.student-login-page > .portal-back-button,
+.faculty-page > .portal-back-button,
+.hod-section > .portal-back-button,
+.admin-login-page > .portal-back-button,
+.role-page > .portal-back-button {
+  margin: 0;
+}
+
+.signup-page > .portal-back-button {
+  z-index: 2;
+}
+
+.student-login-page > .portal-back-button:focus-visible,
+.faculty-page > .portal-back-button:focus-visible,
+.hod-section > .portal-back-button:focus-visible,
+.admin-login-page > .portal-back-button:focus-visible,
+.role-page > .portal-back-button:focus-visible {
+  outline-offset: 3px;
+}
+
+.student-dashboard,
+.faculty-dashboard-layout,
+.hod-layout,
+.admin-dashboard {
+  color: var(--role-text);
+  font-family: var(--role-font);
+  line-height: 1.5;
+}
+
+.student-sidebar,
+.admin-sidebar,
+.faculty-dashboard-layout .fac-sidebar,
+.hod-layout .hod-sidebar {
+  width: 255px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--role-border);
+  background: var(--role-surface);
+  color: var(--role-text);
+}
+
+.student-main,
+.admin-main,
+.faculty-dashboard-layout .fac-content,
+.hod-layout .hod-content {
+  padding: var(--role-page-padding);
+}
+
+.student-header,
+.admin-dashboard .dashboard-header,
+.faculty-dashboard-layout .fac-topbar,
+.hod-layout .hod-header {
+  border-color: var(--role-border);
+  background: var(--role-surface);
+  box-shadow: none;
+}
+
+.student-dashboard :is(.student-info h1, .timetable-title h2, .selected-day-heading, .selected-date-heading),
+.faculty-dashboard-layout .fac-page-heading,
+.hod-layout .header-left h1,
+.hod-layout :is(.dashboard-welcome h2, .panel-header h3),
+.admin-dashboard :is(.greeting h1, .page-title h2, .section-heading h2) {
+  color: var(--role-primary);
+  font-family: var(--role-font);
+}
+
+.student-dashboard :is(.student-info p, .attendance-details p),
+.faculty-dashboard-layout .fac-page-subheading,
+.hod-layout :is(.header-left p, .dashboard-welcome p, .panel-header p),
+.admin-dashboard :is(.greeting p, .section-heading p) {
+  color: var(--role-muted);
+  font-family: var(--role-font);
+}
+
+.student-dashboard :is(.dashboard-card, .student-header, [class$="-card"], [class$="card"], [class*="-panel"]),
+.faculty-dashboard-layout :is([class$="-card"], [class$="card"], [class*="-panel"]),
+.hod-layout :is([class$="-card"], [class$="card"], [class*="-panel"]),
+.admin-dashboard :is([class$="-card"], [class$="card"], [class*="-panel"]) {
+  border-color: var(--role-border);
+  border-radius: var(--role-radius-card);
+  background-color: var(--role-surface);
+  box-shadow: var(--role-shadow-card);
+}
+
+.student-dashboard .student-header {
+  padding: var(--role-card-padding);
+}
+
+.student-dashboard .dashboard-card,
+.faculty-dashboard-layout :is([class$="-card"], [class$="card"], [class*="-panel"]),
+.hod-layout :is([class$="-card"], [class$="card"], [class*="-panel"]),
+.admin-dashboard :is([class$="-card"], [class$="card"], [class*="-panel"]) {
+  padding: var(--role-card-padding);
+}
+
+.student-dashboard .student-nav,
+.admin-dashboard .admin-sidebar nav,
+.faculty-dashboard-layout .fac-sidebar-nav,
+.hod-layout .hod-navigation {
+  gap: 6px;
+}
+
+.student-dashboard .nav-item,
+.admin-dashboard .nav-item,
+.faculty-dashboard-layout .fac-nav-item,
+.hod-layout .hod-nav-item {
+  min-height: 42px;
+  border-radius: var(--role-radius-control);
+  font-family: var(--role-font);
+  font-size: 14px;
+}
+
+.student-dashboard .nav-item:hover,
+.admin-dashboard .nav-item:hover,
+.faculty-dashboard-layout .fac-nav-item:hover,
+.hod-layout .hod-nav-item:hover {
+  background: var(--role-accent-soft);
+  color: var(--role-accent);
+  transform: translateX(2px);
+}
+
+.student-dashboard .nav-item.active,
+.admin-dashboard .nav-item.active,
+.faculty-dashboard-layout .fac-nav-item.active,
+.hod-layout .hod-nav-item.active {
+  border-color: var(--role-border);
+  background: var(--role-accent-soft);
+  color: var(--role-primary);
+  box-shadow: none;
+}
+
+.faculty-dashboard-layout .fac-brand-title {
+  background: linear-gradient(to right, var(--role-primary), var(--role-accent));
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.faculty-dashboard-layout :is(.fac-top-action-btn.primary, .fac-btn.primary) {
+  border-color: var(--role-primary);
+  background: var(--role-primary);
+  color: var(--role-surface);
+  box-shadow: none;
+}
+
+.faculty-dashboard-layout :is(.fac-top-action-btn.primary, .fac-btn.primary):hover {
+  border-color: var(--role-accent);
+  background: var(--role-accent);
+  color: var(--role-surface);
+}
+
+.hod-layout .hod-brand,
+.hod-layout .hod-sidebar-bottom {
+  border-color: var(--role-border);
+}
+
+.hod-layout .hod-brand-logo,
+.hod-layout .hod-sidebar-avatar,
+.hod-layout .header-avatar {
+  background: var(--role-primary);
+  color: var(--role-surface);
+}
+
+.hod-layout .hod-brand h2,
+.hod-layout .hod-nav-title {
+  color: var(--role-primary);
+}
+
+.hod-layout :is(.hod-brand span, .hod-sidebar-profile-text span, .hod-nav-item, .hod-profile-link) {
+  color: var(--role-muted);
+}
+
+.hod-layout :is(.hod-profile-link:hover, .hod-profile-link.active) {
+  background: var(--role-accent-soft);
+  color: var(--role-primary);
+}
+
+.hod-layout .header-left h1,
+.hod-layout :is(.dashboard-welcome h2, .panel-header h3) {
+  font-size: 20px;
+  line-height: 1.35;
+}
+
+.hod-layout .panel-header button,
+.admin-dashboard .text-button,
+.gallery-card-back button {
+  min-height: var(--role-button-height);
+  padding: 8px 14px;
+  border: 1px solid var(--role-border);
+  border-radius: var(--role-radius-control);
+  background: var(--role-accent-soft);
+  color: var(--role-primary);
+  font-family: var(--role-font);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.hod-layout .panel-header button:hover,
+.admin-dashboard .text-button:hover,
+.gallery-card-back button:hover {
+  border-color: var(--role-primary);
+  background: var(--role-primary);
+  color: var(--role-surface);
+  transform: translateY(-1px);
+}
+
+.student-dashboard :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea),
+.faculty-dashboard-layout :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea),
+.hod-layout :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea),
+.admin-dashboard :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  border-color: var(--role-border);
+  border-radius: var(--role-radius-control);
+  color: var(--role-text);
+  font-family: var(--role-font);
+  font-size: 14px;
+}
+
+.student-dashboard :is(input, select, textarea):focus-visible,
+.faculty-dashboard-layout :is(input, select, textarea):focus-visible,
+.hod-layout :is(input, select, textarea):focus-visible,
+.admin-dashboard :is(input, select, textarea):focus-visible {
+  border-color: var(--role-accent);
+  outline: 2px solid rgba(37, 99, 235, 0.18);
+  outline-offset: 1px;
+}
+
+.student-dashboard table,
+.faculty-dashboard-layout table,
+.hod-layout table,
+.admin-dashboard table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.student-dashboard :is(th, td),
+.faculty-dashboard-layout :is(th, td),
+.hod-layout :is(th, td),
+.admin-dashboard :is(th, td) {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--role-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.student-dashboard th,
+.faculty-dashboard-layout th,
+.hod-layout th,
+.admin-dashboard th {
+  background: var(--role-accent-soft);
+  color: var(--role-primary);
+  font-weight: 700;
+}
+
+.portal-back-button {
+  margin-bottom: var(--role-section-gap);
+}
+
+.signup-page {
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  :root {
+    --role-page-padding: 20px;
+    --role-section-gap: 18px;
+    --role-card-padding: 16px;
+  }
+
+  .role-page-back-btn,
+  .role-page > .portal-back-button,
+  .student-login-page > .portal-back-button,
+  .faculty-page > .portal-back-button,
+  .hod-section > .portal-back-button,
+  .admin-login-page > .portal-back-button {
+    top: 14px;
+    left: 14px;
+  }
+
+}
+
+@media (max-width: 1100px) {
+  .student-dashboard .student-sidebar {
+    width: 215px;
+  }
+
+  .admin-dashboard .admin-sidebar {
+    width: 220px;
+  }
+}
+
+@media (max-width: 992px) {
+  .faculty-dashboard-layout .fac-sidebar {
+    left: -255px;
+  }
+}
+
+@media (max-width: 900px) {
+  .hod-layout .hod-sidebar {
+    width: 220px;
+  }
+}
+
+@media (max-width: 800px) {
+  .admin-dashboard .admin-sidebar {
+    width: 72px;
+  }
+}
+
+@media (max-width: 700px) {
+  .student-dashboard .student-sidebar {
+    width: 100%;
+  }
+}
+
+@media (max-width: 700px) {
+  .hod-layout .hod-sidebar {
+    width: 70px;
+  }
+}
+
 @media (max-width: 600px) {
+  .portal-back-button {
+    min-height: 38px;
+    padding: 7px 11px;
+    font-size: 14px;
+  }
+
   .role-page .title {
     font-size: 28px;
   }

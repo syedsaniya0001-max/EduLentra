@@ -42,12 +42,16 @@
     margin: auto;
 }
 .highlight-card{
+    display: block;
     border:1px solid #e6eef8;
     background: #fff;
     padding:30px;
     border-radius: 20px;
     text-align:center;
     box-shadow:0 5px 15px rgba(0,0,0,0.08);
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
     /* transition-duration: 1.5s;
     transition-timing-function: ease;; */
      transition:1.2s ease;
@@ -57,6 +61,10 @@
 .highlight-card:hover{
     transform:translateY(-100px);
     box-shadow:0 20px 35px rgba(0,0,0,0.15);
+}
+.highlight-card:focus-visible{
+    outline: 3px solid #2563eb;
+    outline-offset: 4px;
 }
 .icon{
     width:85px;

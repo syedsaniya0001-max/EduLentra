@@ -1,4 +1,6 @@
 import { API_BASE_URL } from "./config";
+import { clearAuthSession, storeAuthSession } from "./authSession";
+import { announcementsApi } from "./announcementsApi";
 
 const PROFILE_KEY = "facultyPortalProfile";
 const TOKEN_KEY = "facultyToken";
@@ -29,20 +31,28 @@ const writeJson = (key, value) => {
 };
 
 const readRecords = (name) => readJson(`${DATA_PREFIX}${name}`, []);
-const writeRecords = (name, records) => writeJson(`${DATA_PREFIX}${name}`, records);
+const writeRecords = (name, records) =>
+  writeJson(`${DATA_PREFIX}${name}`, records);
 
 async function request(path, options = {}) {
+  const token =
+    localStorage.getItem(TOKEN_KEY) ||
+    sessionStorage.getItem("edulentraToken");
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers
     }
   });
+
   const result = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(result.message || result.error || "Faculty service request failed.");
+    throw new Error(
+      result.message || result.error || "Faculty service request failed."
+    );
   }
 
   return result;
@@ -55,56 +65,77 @@ const saveProfile = (profile) => {
 };
 
 export const facultyApi = {
-  async login(email, password) {
-    const faculties = await request("/api/faculties");
-    const account = faculties.find(
-      (faculty) =>
-        faculty.email?.toLowerCase() === email.toLowerCase() ||
-        faculty.fid?.toLowerCase() === email.toLowerCase()
-    );
-    const loginId = account?.fid || email;
-    const result = await request("/api/login", {
+  // Faculty login using backend JWT authentication
+  async login(facultyId, password) {
+    const result = await request("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ role: "faculty", id: loginId, password })
+      body: JSON.stringify({
+        username: facultyId.trim(),
+        password,
+        role: "faculty"
+      })
     });
+
+    if (!result.token) {
+      throw new Error(
+        "Login did not return an authentication token. Please check the backend login response."
+      );
+    }
+
+    // Save the real JWT, not the placeholder string "active".
+    storeAuthSession(result, "faculty");
 
     saveProfile({
-      ...account,
-      name: result.name || account?.name || email,
-      email,
-      id: account?._id || account?.fid || loginId,
-      fid: loginId,
-      department: account?.department || account?.dept || defaultFaculty.department
+      ...(result.user || {}),
+      name: result.user?.name || facultyId,
+      id: result.user?.id || facultyId,
+      fid: facultyId,
+      department: result.user?.department || defaultFaculty.department
     });
-    localStorage.setItem(TOKEN_KEY, "active");
-    return { ...result, message: "Login successful! Entering portal..." };
+
+    return {
+      ...result,
+      message: "Login successful! Entering portal..."
+    };
   },
 
+  // Submit a Faculty registration request.
+  // Registration is not a login and must not create a fake token.
   async signup(details) {
-    const account = await request("/api/faculties", {
+    const account = await request("/api/faculty/signup", {
       method: "POST",
       body: JSON.stringify({
         name: details.name,
-        fid: details.email,
+        facultyId: details.id,
+        email: details.email,
         subject: details.subject,
-        dept: details.department,
+        department: details.department,
+        branch: details.branch,
         password: details.password
       })
     });
+
     saveProfile({
-      ...account,
-      ...details,
-      id: account._id || details.id,
-      fid: details.email,
+      name: details.name,
+      email: details.email,
+      id: details.id,
+      fid: details.id,
       department: details.department
     });
-    localStorage.setItem(TOKEN_KEY, "active");
-    return { ...account, message: "Registration request submitted successfully." };
+
+    return {
+      requestId: account.requestId,
+      message: "Registration request submitted successfully."
+    };
   },
 
   logout() {
-    localStorage.removeItem(TOKEN_KEY);
+    clearAuthSession();
     localStorage.removeItem(PROFILE_KEY);
+  },
+
+  getToken() {
+    return localStorage.getItem(TOKEN_KEY);
   },
 
   getCurrentUser() {
@@ -123,6 +154,7 @@ export const facultyApi = {
 
   async changePassword(currentPassword, newPassword) {
     const faculty = this.getCurrentUser();
+
     return request("/api/set-password", {
       method: "PUT",
       body: JSON.stringify({
@@ -138,26 +170,20 @@ export const facultyApi = {
     return {};
   },
 
-  async getStudents(search = "", branch = "All", semester = "All") {
-    const students = await request("/api/students");
-    const normalizedSearch = search.toLowerCase();
+  async getStudents(search = "", branch = "All") {
+    const query = new URLSearchParams();
+    if (search) query.set("search", search);
+    if (branch !== "All") query.set("branch", branch);
+    const result = await request(`/api/students?${query.toString()}`);
+    const students = result.students || [];
+
     return students
       .map((student) => ({
         ...student,
         id: student._id,
-        rollNumber: student.rollNumber || student.roll || "",
+        rollNumber: student.rollNumber || "",
         branch: student.branch || "",
-        semester: student.semester || ""
-      }))
-      .filter((student) => {
-        const matchesSearch =
-          !normalizedSearch ||
-          student.name?.toLowerCase().includes(normalizedSearch) ||
-          student.rollNumber.toLowerCase().includes(normalizedSearch);
-        const matchesBranch = branch === "All" || student.branch.includes(branch);
-        const matchesSemester = semester === "All" || student.semester === semester;
-        return matchesSearch && matchesBranch && matchesSemester;
-      });
+      }));
   },
 
   async getOutpasses() {
@@ -168,7 +194,9 @@ export const facultyApi = {
     writeRecords(
       "outpasses",
       readRecords("outpasses").map((item) =>
-        item.id === id ? { ...item, status: "Approved", remarks } : item
+        item.id === id
+          ? { ...item, status: "Approved", remarks }
+          : item
       )
     );
   },
@@ -177,7 +205,9 @@ export const facultyApi = {
     writeRecords(
       "outpasses",
       readRecords("outpasses").map((item) =>
-        item.id === id ? { ...item, status: "Rejected", remarks } : item
+        item.id === id
+          ? { ...item, status: "Rejected", remarks }
+          : item
       )
     );
   },
@@ -193,16 +223,24 @@ export const facultyApi = {
 
   async markAttendance(payload) {
     const records = readRecords("attendance");
+
     const existingIndex = records.findIndex(
       (record) =>
         record.date === payload.date &&
         record.subject === payload.subject &&
         record.class === payload.class
     );
-    const nextRecord = { ...payload, id: records[existingIndex]?.id || crypto.randomUUID() };
 
-    if (existingIndex < 0) records.push(nextRecord);
-    else records[existingIndex] = nextRecord;
+    const nextRecord = {
+      ...payload,
+      id: records[existingIndex]?.id || crypto.randomUUID()
+    };
+
+    if (existingIndex < 0) {
+      records.push(nextRecord);
+    } else {
+      records[existingIndex] = nextRecord;
+    }
 
     writeRecords("attendance", records);
     return { message: "Attendance saved on this device." };
@@ -214,7 +252,13 @@ export const facultyApi = {
 
   async createAssignment(assignment) {
     const records = readRecords("assignments");
-    records.push({ ...assignment, id: crypto.randomUUID(), submissions: [] });
+
+    records.push({
+      ...assignment,
+      id: crypto.randomUUID(),
+      submissions: []
+    });
+
     writeRecords("assignments", records);
   },
 
@@ -231,44 +275,55 @@ export const facultyApi = {
           }
         : assignment
     );
+
     writeRecords("assignments", assignments);
   },
 
   async getNotes(search = "", subject = "All") {
     const normalizedSearch = search.toLowerCase();
+
     return readRecords("notes").filter((note) => {
-      const matchesSubject = subject === "All" || note.subject === subject;
+      const matchesSubject =
+        subject === "All" || note.subject === subject;
+
       const matchesSearch =
         !normalizedSearch ||
-        `${note.title} ${note.description || ""}`.toLowerCase().includes(normalizedSearch);
+        `${note.title} ${note.description || ""}`
+          .toLowerCase()
+          .includes(normalizedSearch);
+
       return matchesSubject && matchesSearch;
     });
   },
 
   async uploadNote(note) {
     const records = readRecords("notes");
-    records.push({ ...note, id: crypto.randomUUID(), uploadedAt: new Date().toISOString() });
+
+    records.push({
+      ...note,
+      id: crypto.randomUUID(),
+      uploadedAt: new Date().toISOString()
+    });
+
     writeRecords("notes", records);
   },
 
   async deleteNote(id) {
-    writeRecords("notes", readRecords("notes").filter((note) => note.id !== id));
+    writeRecords(
+      "notes",
+      readRecords("notes").filter((note) => note.id !== id)
+    );
   },
 
   async getAnnouncements() {
-    return readRecords("announcements");
+    return announcementsApi.getAll();
   },
 
   async postAnnouncement(announcement) {
-    const records = readRecords("announcements");
-    records.unshift({ ...announcement, id: crypto.randomUUID(), postedAt: new Date().toISOString() });
-    writeRecords("announcements", records);
+    return announcementsApi.create(announcement);
   },
 
   async deleteAnnouncement(id) {
-    writeRecords(
-      "announcements",
-      readRecords("announcements").filter((announcement) => announcement.id !== id)
-    );
+    return announcementsApi.remove(id);
   }
 };
