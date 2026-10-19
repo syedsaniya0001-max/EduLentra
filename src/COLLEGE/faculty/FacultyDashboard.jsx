@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { facultyApi } from "../../api/facultyApi";
 import "./components/FacultyStyles.css";
+import PortalBackButton from "../PortalBackButton";
 
 import FacultyOverview from "./components/FacultyOverview";
 import StudentList from "./components/StudentList";
+import StudentSignupApprovals from "./components/StudentSignupApprovals";
 import AttendanceManagement from "./components/AttendanceManagement";
 import NotesManagement from "./components/NotesManagement";
 import AssignmentManagement from "./components/AssignmentManagement";
@@ -17,6 +19,8 @@ export default function FacultyDashboard({ initialTab = "overview", onLogout }) 
   const [faculty, setFaculty] = useState(facultyApi.getCurrentUser());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [pendingOutpasses, setPendingOutpasses] = useState(0);
+  const [hasTabHistory, setHasTabHistory] = useState(false);
+  const tabHistory = useRef([]);
 
   const navigate = useNavigate();
 
@@ -38,9 +42,19 @@ export default function FacultyDashboard({ initialTab = "overview", onLogout }) 
   };
 
   const handleTabChange = (tabId) => {
+    if (tabId !== activeTab) {
+      tabHistory.current.push(activeTab);
+      setHasTabHistory(true);
+    }
     setActiveTab(tabId);
     setSidebarOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleTabBack = () => {
+    const previousTab = tabHistory.current.pop() || "overview";
+    setHasTabHistory(tabHistory.current.length > 0);
+    setActiveTab(previousTab);
   };
 
   const handleSignout = () => {
@@ -53,14 +67,19 @@ export default function FacultyDashboard({ initialTab = "overview", onLogout }) 
   };
 
   const navItems = [
-    { id: "overview", label: "Dashboard Home", icon: "🏠", category: "Core" },
-    { id: "students", label: "Student List", icon: "👥", category: "Academics" },
-    { id: "attendance", label: "Attendance", icon: "📅", category: "Academics" },
-    { id: "notes", label: "Notes & Materials", icon: "📚", category: "Academics" },
-    { id: "assignments", label: "Assignments", icon: "📝", category: "Academics" },
-    { id: "announcements", label: "Announcements", icon: "📢", category: "Campus" },
-    { id: "outpass", label: "Outpass Approvals", icon: "🎫", badge: pendingOutpasses, category: "Campus" },
-    { id: "profile", label: "Faculty Profile", icon: "👤", category: "Settings" }
+    { id: "overview", label: "Dashboard Home", icon: "🏠" },
+    { id: "students", label: "Student List", icon: "👥" },
+    {
+  id: "student-approvals",
+  label: "Student Signup Approvals",
+  icon: "✅"
+},
+    { id: "attendance", label: "Attendance", icon: "📅" },
+    { id: "notes", label: "Notes & Materials", icon: "📚" },
+    { id: "assignments", label: "Assignments", icon: "📝" },
+    { id: "announcements", label: "Announcements", icon: "📢" },
+    { id: "outpass", label: "Outpass Approvals", icon: "🎫", badge: pendingOutpasses },
+    { id: "profile", label: "Faculty Profile", icon: "👤" }
   ];
 
   return (
@@ -80,15 +99,19 @@ export default function FacultyDashboard({ initialTab = "overview", onLogout }) 
 
       {/* Sidebar */}
       <aside className={`fac-sidebar ${sidebarOpen ? "open" : ""}`}>
-        <div className="fac-sidebar-brand">
-          <div className="fac-brand-title">
-            <span>🎓</span> EduLentra
+        <div className="fac-sidebar-profile">
+          <img
+            src={faculty?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"}
+            alt=""
+            className="fac-user-avatar"
+          />
+          <div className="fac-profile-info">
+            <h3>{faculty?.name || "Dr. Faculty"}</h3>
+            <p>{faculty?.department || "CSE Department"}</p>
           </div>
-          <span className="fac-brand-badge">Faculty</span>
         </div>
 
         <div className="fac-sidebar-nav">
-          <div className="fac-nav-category">Portal Navigation</div>
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -103,20 +126,9 @@ export default function FacultyDashboard({ initialTab = "overview", onLogout }) 
         </div>
 
         <div className="fac-sidebar-footer">
-          <div className="fac-user-snippet" onClick={() => handleTabChange("profile")} style={{ cursor: "pointer" }}>
-            <img
-              src={faculty?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"}
-              alt="Avatar"
-              className="fac-user-avatar"
-            />
-            <div className="fac-user-info">
-              <div className="fac-user-name">{faculty?.name || "Dr. Faculty"}</div>
-              <div className="fac-user-dept">{faculty?.department || "CSE Department"}</div>
-            </div>
-          </div>
-
-          <button className="fac-logout-btn" onClick={handleSignout}>
-            <span>🚪</span> Sign Out Portal
+          <button className="fac-nav-item fac-logout-btn" onClick={handleSignout}>
+            <span className="fac-nav-icon">↪</span>
+            <span>Log Out</span>
           </button>
         </div>
       </aside>
@@ -152,11 +164,16 @@ export default function FacultyDashboard({ initialTab = "overview", onLogout }) 
 
         {/* Dynamic Content View */}
         <main className="fac-content">
+          <PortalBackButton
+            show={activeTab !== "overview" || hasTabHistory}
+            onBack={handleTabBack}
+          />
           {activeTab === "overview" && (
             <FacultyOverview faculty={faculty} onNavigate={handleTabChange} />
           )}
 
           {activeTab === "students" && <StudentList />}
+          {activeTab === "student-approvals" && <StudentSignupApprovals />}
 
           {activeTab === "attendance" && <AttendanceManagement />}
 

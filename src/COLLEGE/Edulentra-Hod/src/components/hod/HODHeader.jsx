@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { clearAuthSession } from "../../../../../api/authSession";
 import "../../styles/hod/HODHeader.css";
 
 function HODHeader() {
@@ -22,6 +23,17 @@ function HODHeader() {
           onClick={() => navigate("/")}
         >
           ⌂
+        </button>
+        <button
+          className="header-icon-button"
+          aria-label="Log out"
+          title="Log out"
+          onClick={() => {
+            clearAuthSession();
+            navigate("/hod", { replace: true });
+          }}
+        >
+          ↪
         </button>
 
         {/* Notification */}

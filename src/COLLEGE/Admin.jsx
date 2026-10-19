@@ -1,6 +1,15 @@
-import React, { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import "./Admin.css";
+import PortalBackButton from "./PortalBackButton";
+import { API_BASE_URL } from "../api/config";
+import { roleApprovalApi } from "../api/roleApprovalApi";
+import { clearAuthSession, storeAuthSession } from "../api/authSession";
+import {
+  announcementAudienceLabel,
+  announcementsApi,
+  toLocalDateTime,
+} from "../api/announcementsApi";
 
 const BRANCHES = [
   "ECE",
@@ -18,99 +27,18 @@ const BRANCHES = [
   "MBA",
 ];
 
-const BRANCH_STUDENTS = {
-  ECE: 420,
-  EEE: 365,
-  CSE: 680,
-  "CSE-AI": 310,
-  "CSE-AIML": 390,
-  "CSE-IT": 280,
-  "CSE-AIDS": 295,
-  CIVIL: 240,
-  MECH: 410,
-  PHARMACY: 350,
-  BBA: 220,
-  BCA: 260,
-  MBA: 180,
-};
-
-const STUDENTS = [
-  {
-    id: 1,
-    name: "Arjun Kumar",
-    branch: "CSE",
-    year: "3rd Year",
-    status: "Active",
-  },
-  {
-    id: 2,
-    name: "Priya Sharma",
-    branch: "ECE",
-    year: "2nd Year",
-    status: "Active",
-  },
-  {
-    id: 3,
-    name: "Rahul Reddy",
-    branch: "CSE-AIML",
-    year: "4th Year",
-    status: "Active",
-  },
-  {
-    id: 4,
-    name: "Sneha Rao",
-    branch: "MBA",
-    year: "1st Year",
-    status: "Active",
-  },
-  {
-    id: 5,
-    name: "Vikram Singh",
-    branch: "MECH",
-    year: "3rd Year",
-    status: "Active",
-  },
-];
-
-const FACULTY = [
-  {
-    id: 1,
-    name: "Dr. Anil Kumar",
-    department: "CSE",
-    role: "Professor",
-  },
-  {
-    id: 2,
-    name: "Dr. Meena Rao",
-    department: "ECE",
-    role: "Associate Professor",
-  },
-  {
-    id: 3,
-    name: "Prof. Suresh Reddy",
-    department: "MECH",
-    role: "Assistant Professor",
-  },
-  {
-    id: 4,
-    name: "Dr. Kavitha Sharma",
-    department: "PHARMACY",
-    role: "Professor",
-  },
-];
-
 const NAV_ITEMS = [
   ["Dashboard", "▦"],
-  ["Students", "♙"],
-  ["Faculty", "♟"],
-  ["HOD & Departments", "⌂"],
+  ["Students", "👨‍🎓"],
+  ["Faculty", "👩‍🏫"],
+  ["HOD & Departments", "🏢"],
   ["Announcements", "▣"],
   ["Placements", "◈"],
   ["Achievements / Gallery", "▧"],
   ["Events", "◷"],
-  ["Requests", "✉"],
+  ["Requests", "📩"],
   ["Notifications", "🔔"],
-  ["Profile", "●"],
+  ["Profile", "👤"],
 ];
 
 function getGreeting() {
@@ -174,8 +102,14 @@ const createAnnouncementDraft = () => ({
   title: "",
   category: "General",
   priority: "Normal",
-  audience: "All",
+  targetRole: "ALL",
+  targetDepartment: "",
+  targetBranch: "",
+  targetSection: "",
   date: new Date().toISOString().slice(0, 10),
+  publishAt: "",
+  expiresAt: "",
+  isActive: true,
   message: "",
 });
 
@@ -209,13 +143,21 @@ function Admin() {
   const [adminId, setAdminId] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   const [activeSection, setActiveSection] = useState("Dashboard");
+  const [hasSectionHistory, setHasSectionHistory] = useState(false);
+  const sectionHistory = useRef([]);
 
   const [selectedBranch, setSelectedBranch] = useState("All");
 
   const [studentSearch, setStudentSearch] = useState("");
   const [facultySearch, setFacultySearch] = useState("");
+  const [students, setStudents] = useState([]);
+  const [faculty, setFaculty] = useState([]);
+  const [hods, setHods] = useState([]);
+  const [isLoadingDirectories, setIsLoadingDirectories] = useState(false);
+  const [directoryError, setDirectoryError] = useState("");
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [achievementPosts, setAchievementPosts] = useState(() =>
@@ -229,40 +171,28 @@ function Admin() {
   const [eventSearch, setEventSearch] = useState("");
   const [eventCategory, setEventCategory] = useState("All");
   const [eventDateFilter, setEventDateFilter] = useState("All");
-  const [announcements, setAnnouncements] = useState(() => readAdminItems("adminAnnouncements"));
+  const [announcements, setAnnouncements] = useState([]);
   const [announcementDraft, setAnnouncementDraft] = useState(createAnnouncementDraft);
   const [announcementSearch, setAnnouncementSearch] = useState("");
   const [announcementCategory, setAnnouncementCategory] = useState("All");
   const [announcementPriority, setAnnouncementPriority] = useState("All");
+  const [editingAnnouncementId, setEditingAnnouncementId] = useState("");
+  const [isLoadingAnnouncements, setIsLoadingAnnouncements] = useState(false);
+  const [announcementError, setAnnouncementError] = useState("");
+  const [announcementMessage, setAnnouncementMessage] = useState("");
+  const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
+  const [deletingAnnouncementId, setDeletingAnnouncementId] = useState("");
   const [placements, setPlacements] = useState(() => readAdminItems("adminPlacements"));
   const [placementDraft, setPlacementDraft] = useState(createPlacementDraft);
   const [placementSearch, setPlacementSearch] = useState("");
   const [placementBranch, setPlacementBranch] = useState("All");
   const [placementStatus, setPlacementStatus] = useState("All");
 
-  const [requests, setRequests] = useState([
-    {
-      id: 1,
-      title: "New Faculty Requirement",
-      from: "HOD - CSE",
-      type: "Faculty",
-      status: "Pending",
-    },
-    {
-      id: 2,
-      title: "Department Equipment Request",
-      from: "HOD - ECE",
-      type: "Department",
-      status: "Pending",
-    },
-    {
-      id: 3,
-      title: "Event Approval",
-      from: "HOD - MBA",
-      type: "Event",
-      status: "Approved",
-    },
-  ]);
+  const [requests, setRequests] = useState([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+  const [reviewingRequestId, setReviewingRequestId] = useState("");
+  const [requestError, setRequestError] = useState("");
+  const [requestMessage, setRequestMessage] = useState("");
 
   const [notifications, setNotifications] = useState([
     {
@@ -282,12 +212,12 @@ function Admin() {
     },
   ]);
 
-  const totalStudents = Object.values(BRANCH_STUDENTS).reduce(
-    (total, value) => total + value,
-    0
-  );
-
-  const totalFaculty = FACULTY.length;
+  const totalStudents = students.length;
+  const totalFaculty = faculty.length;
+  const branchStudentCounts = students.reduce((counts, student) => {
+    counts[student.branch] = (counts[student.branch] || 0) + 1;
+    return counts;
+  }, {});
 
   const pendingRequests = requests.filter(
     (request) => request.status === "Pending"
@@ -300,31 +230,33 @@ function Admin() {
   const filteredStudents = useMemo(() => {
     const query = studentSearch.toLowerCase().trim();
 
-    return STUDENTS.filter((student) => {
+    return students.filter((student) => {
       const branchMatch =
         selectedBranch === "All" ||
         student.branch === selectedBranch;
 
       const searchMatch =
         !query ||
-        student.name.toLowerCase().includes(query) ||
-        student.branch.toLowerCase().includes(query);
+        student.name?.toLowerCase().includes(query) ||
+        student.branch?.toLowerCase().includes(query) ||
+        student.rollNumber?.toLowerCase().includes(query);
 
       return branchMatch && searchMatch;
     });
-  }, [selectedBranch, studentSearch]);
+  }, [selectedBranch, studentSearch, students]);
 
   const filteredFaculty = useMemo(() => {
     const query = facultySearch.toLowerCase().trim();
 
-    return FACULTY.filter((member) => {
+    return faculty.filter((member) => {
       return (
         !query ||
-        member.name.toLowerCase().includes(query) ||
-        member.department.toLowerCase().includes(query)
+        member.name?.toLowerCase().includes(query) ||
+        member.department?.toLowerCase().includes(query) ||
+        member.facultyId?.toLowerCase().includes(query)
       );
     });
-  }, [facultySearch]);
+  }, [faculty, facultySearch]);
 
   const filteredAchievementPosts = useMemo(() => {
     const query = achievementSearch.toLowerCase().trim();
@@ -370,12 +302,43 @@ function Admin() {
         announcementPriority === "All" || announcement.priority === announcementPriority;
       const matchesSearch =
         !query ||
-        `${announcement.title} ${announcement.message} ${announcement.audience} ${announcement.category}`
+        `${announcement.title} ${announcement.message} ${announcement.targetRole} ${announcement.targetDepartment || ""} ${announcement.category}`
           .toLowerCase()
           .includes(query);
       return matchesCategory && matchesPriority && matchesSearch;
     });
   }, [announcements, announcementCategory, announcementPriority, announcementSearch]);
+
+  const announcementDepartments = useMemo(
+    () =>
+      [...new Set([
+        ...hods.map((hod) => hod.department),
+        ...faculty.map((member) => member.department),
+        ...students.map((student) => student.branch),
+      ].filter(Boolean))].sort(),
+    [faculty, hods, students]
+  );
+  const announcementBranches = useMemo(
+    () =>
+      [...new Set([
+        ...students.map((student) => student.branch),
+        ...faculty.map((member) => member.branch),
+      ].filter(Boolean))].sort(),
+    [faculty, students]
+  );
+  const announcementSections = useMemo(
+    () =>
+      [...new Set(
+        students
+          .filter((student) =>
+            !announcementDraft.targetBranch ||
+            student.branch === announcementDraft.targetBranch
+          )
+          .map((student) => student.section)
+          .filter(Boolean)
+      )].sort(),
+    [announcementDraft.targetBranch, students]
+  );
 
   const filteredPlacements = useMemo(() => {
     const query = placementSearch.toLowerCase().trim();
@@ -397,17 +360,132 @@ function Admin() {
     });
   }, [placements, placementBranch, placementSearch, placementStatus]);
 
-  const handleLogin = (event) => {
-    event.preventDefault();
+  useEffect(() => {
+    if (!loggedIn) return undefined;
 
-    if (
-      adminId.trim().toUpperCase() === "ADMIN" &&
-      password === "admin123"
-    ) {
+    let cancelled = false;
+    setIsLoadingRequests(true);
+    setIsLoadingDirectories(true);
+    setRequestError("");
+    setDirectoryError("");
+
+    Promise.all([
+      roleApprovalApi.directory("students"),
+      roleApprovalApi.directory("faculty"),
+      roleApprovalApi.directory("hod"),
+    ])
+      .then(([studentResult, facultyResult, hodResult]) => {
+        if (!cancelled) {
+          setStudents(studentResult.students || []);
+          setFaculty(facultyResult.faculty || []);
+          setHods(hodResult.hods || []);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) setDirectoryError(error.message);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingDirectories(false);
+      });
+
+    roleApprovalApi.list("hod")
+      .then((result) => {
+        if (!cancelled) {
+          setRequests(
+            (result.requests || []).map((request) => ({
+              id: request._id,
+              title: request.name,
+              from: request.department,
+              type: `HOD ID: ${request.hodId}`,
+              email: request.email,
+              status: "Pending",
+            }))
+          );
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) setRequestError(error.message);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingRequests(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loggedIn]);
+
+  useEffect(() => {
+    if (!loggedIn || activeSection !== "Announcements") return undefined;
+
+    let cancelled = false;
+    let requestId = 0;
+    let hasLoaded = false;
+    const refreshAnnouncements = async () => {
+      const currentRequestId = ++requestId;
+      if (!hasLoaded) setIsLoadingAnnouncements(true);
+      try {
+        const items = await announcementsApi.getAll();
+        if (!cancelled && currentRequestId === requestId) {
+          setAnnouncements(items);
+          setAnnouncementError("");
+        }
+      } catch (error) {
+        if (!cancelled && currentRequestId === requestId) {
+          setAnnouncementError(error.message || "Unable to load announcements.");
+        }
+      } finally {
+        if (!cancelled && currentRequestId === requestId) {
+          hasLoaded = true;
+          setIsLoadingAnnouncements(false);
+        }
+      }
+    };
+
+    const unsubscribe = announcementsApi.subscribeToAnnouncementUpdates(
+      () => refreshAnnouncements(),
+      () => {
+        if (!cancelled) {
+          setAnnouncementError("Live updates are unavailable. Refresh to check for new announcements.");
+        }
+      }
+    );
+    void refreshAnnouncements();
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [activeSection, loggedIn]);
+
+  const handleLogin = async (event) => {
+    event.preventDefault();
+    if (!adminId.trim() || !password || isAuthenticating) return;
+
+    setIsAuthenticating(true);
+    setLoginError("");
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: adminId.trim(),
+          password,
+          role: "admin",
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.token) {
+        throw new Error(result.message || "Invalid Admin ID or password.");
+      }
+
+      storeAuthSession(result, "admin");
       setLoggedIn(true);
       setLoginError("");
-    } else {
-      setLoginError("Invalid Admin ID or password.");
+    } catch (error) {
+      setLoginError(error.message || "Unable to sign in as Admin.");
+    } finally {
+      setIsAuthenticating(false);
     }
   };
 
@@ -416,27 +494,54 @@ function Admin() {
     setAdminId("");
     setPassword("");
     setLoginError("");
+    clearAuthSession();
+    setRequests([]);
+    setStudents([]);
+    setFaculty([]);
+    setHods([]);
     setActiveSection("Dashboard");
+    sectionHistory.current = [];
+    setHasSectionHistory(false);
     setSelectedBranch("All");
     setShowNotifications(false);
   };
 
   const openSection = (section) => {
+    if (section !== activeSection) {
+      sectionHistory.current.push(activeSection);
+      setHasSectionHistory(true);
+    }
     setActiveSection(section);
     setShowNotifications(false);
   };
 
-  const approveRequest = (requestId) => {
-    setRequests((currentRequests) =>
-      currentRequests.map((request) =>
-        request.id === requestId
-          ? {
-              ...request,
-              status: "Approved",
-            }
-          : request
-      )
-    );
+  const handleSectionBack = () => {
+    const previousSection = sectionHistory.current.pop() || "Dashboard";
+    setHasSectionHistory(sectionHistory.current.length > 0);
+    setActiveSection(previousSection);
+  };
+
+  const decideHODRequest = async (requestId, decision) => {
+    setReviewingRequestId(requestId);
+    setRequestError("");
+    setRequestMessage("");
+    try {
+      const result = await roleApprovalApi.decide("hod", requestId, decision);
+      setRequests((currentRequests) =>
+        currentRequests.filter((request) => request.id !== requestId)
+      );
+      if (decision === "APPROVED" && result.hod) {
+        setHods((currentHods) => [
+          { ...result.hod, _id: result.hod.id },
+          ...currentHods,
+        ]);
+      }
+      setRequestMessage(result.message);
+    } catch (error) {
+      setRequestError(error.message);
+    } finally {
+      setReviewingRequestId("");
+    }
   };
 
   const markAllNotificationsRead = () => {
@@ -486,23 +591,98 @@ function Admin() {
     saveAdminItems("adminEvents", nextEvents);
   };
 
-  const addAnnouncement = (event) => {
+  const addAnnouncement = async (event) => {
     event.preventDefault();
-    if (!announcementDraft.title.trim() || !announcementDraft.message.trim()) return;
+    if (
+      !announcementDraft.title.trim() ||
+      !announcementDraft.message.trim() ||
+      isSavingAnnouncement
+    ) return;
 
-    const nextAnnouncements = [
-      { ...announcementDraft, id: `${Date.now()}`, title: announcementDraft.title.trim() },
-      ...announcements,
-    ];
-    setAnnouncements(nextAnnouncements);
-    saveAdminItems("adminAnnouncements", nextAnnouncements);
-    setAnnouncementDraft(createAnnouncementDraft());
+    setIsSavingAnnouncement(true);
+    setAnnouncementError("");
+    setAnnouncementMessage("");
+    try {
+      const values = {
+        ...announcementDraft,
+        title: announcementDraft.title.trim(),
+        message: announcementDraft.message.trim(),
+      };
+      const announcement = editingAnnouncementId
+        ? await announcementsApi.update(editingAnnouncementId, values)
+        : await announcementsApi.create(values);
+      setAnnouncements((current) =>
+        editingAnnouncementId
+          ? current.map((item) => item.id === editingAnnouncementId ? announcement : item)
+          : [announcement, ...current]
+      );
+      setEditingAnnouncementId("");
+      setAnnouncementDraft(createAnnouncementDraft());
+      setAnnouncementMessage(
+        editingAnnouncementId
+          ? "Announcement updated."
+          : "Announcement published for the selected audience."
+      );
+    } catch (error) {
+      setAnnouncementError(error.message || "Unable to publish announcement.");
+    } finally {
+      setIsSavingAnnouncement(false);
+    }
   };
 
-  const deleteAnnouncement = (id) => {
-    const nextAnnouncements = announcements.filter((announcement) => announcement.id !== id);
-    setAnnouncements(nextAnnouncements);
-    saveAdminItems("adminAnnouncements", nextAnnouncements);
+  const deleteAnnouncement = async (id) => {
+    if (deletingAnnouncementId) return;
+    setAnnouncementError("");
+    setAnnouncementMessage("");
+    setDeletingAnnouncementId(id);
+    try {
+      await announcementsApi.remove(id);
+      setAnnouncements((current) =>
+        current.filter((announcement) => announcement.id !== id)
+      );
+    } catch (error) {
+      setAnnouncementError(error.message || "Unable to delete announcement.");
+    } finally {
+      setDeletingAnnouncementId("");
+    }
+  };
+
+  const toggleAnnouncementPublication = async (announcement) => {
+    setAnnouncementError("");
+    setAnnouncementMessage("");
+    try {
+      const updated = await announcementsApi.update(announcement.id, {
+        ...announcement,
+        publishAt: toLocalDateTime(announcement.publishAt),
+        expiresAt: toLocalDateTime(announcement.expiresAt),
+        isActive: !announcement.isActive,
+      });
+      setAnnouncements((current) =>
+        current.map((item) => item.id === announcement.id ? updated : item)
+      );
+    } catch (error) {
+      setAnnouncementError(error.message || "Unable to change publication status.");
+    }
+  };
+
+  const editAnnouncement = (announcement) => {
+    setEditingAnnouncementId(announcement.id);
+    setAnnouncementDraft({
+      title: announcement.title,
+      category: announcement.category || "General",
+      priority: announcement.priority || "Normal",
+      targetRole: announcement.targetRole || "ALL",
+      targetDepartment: announcement.targetDepartment || "",
+      targetBranch: announcement.targetBranch || "",
+      targetSection: announcement.targetSection || "",
+      date: announcement.date || new Date().toISOString().slice(0, 10),
+      publishAt: toLocalDateTime(announcement.publishAt),
+      expiresAt: toLocalDateTime(announcement.expiresAt),
+      isActive: announcement.isActive !== false,
+      message: announcement.message,
+    });
+    setAnnouncementError("");
+    setAnnouncementMessage("");
   };
 
   const addPlacement = (event) => {
@@ -531,6 +711,7 @@ function Admin() {
   if (!loggedIn) {
     return (
       <section className="admin-login-page">
+        <PortalBackButton role="admin" fallbackTo="/role" />
         <div className="admin-login-title">
           <h1>EduLentra Admin Portal</h1>
 
@@ -572,8 +753,15 @@ function Admin() {
                   autoComplete="current-password"
                 />
 
-                <button type="submit">
-                  Login
+                <Link
+                  className="password-recovery-link"
+                  to="/forgot-password?role=admin"
+                >
+                  Forgot Password?
+                </Link>
+
+                <button type="submit" disabled={isAuthenticating}>
+                  {isAuthenticating ? "Signing in..." : "Login"}
                 </button>
 
                 {loginError && (
@@ -602,25 +790,25 @@ function Admin() {
     <>
       <div className="stats-grid">
         <StatCard
-          icon="♙"
+          icon="👨‍🎓"
           title="Total Students"
           value={totalStudents}
         />
 
         <StatCard
-          icon="♟"
+          icon="👩‍🏫"
           title="Total Faculty"
           value={`${totalFaculty}+`}
         />
 
         <StatCard
-          icon="⌂"
+          icon="🏢"
           title="Departments"
           value={BRANCHES.length}
         />
 
         <StatCard
-          icon="✉"
+          icon="📩"
           title="Pending Requests"
           value={pendingRequests}
         />
@@ -669,13 +857,13 @@ function Admin() {
               }`}
               onClick={() => {
                 setSelectedBranch(branch);
-                setActiveSection("Students");
+                openSection("Students");
               }}
             >
               <span>{branch}</span>
 
               <strong>
-                {BRANCH_STUDENTS[branch]}
+                {branchStudentCounts[branch] || 0}
               </strong>
 
               <small>
@@ -699,9 +887,7 @@ function Admin() {
 
             <button
               className="text-button"
-              onClick={() =>
-                openSection("Requests")
-              }
+              onClick={() => openSection("Requests")}
             >
               View all
             </button>
@@ -848,34 +1034,36 @@ function Admin() {
       </div>
 
       <div className="table-wrap">
+        {directoryError && <p role="alert" className="login-error">{directoryError}</p>}
+        {isLoadingDirectories && <p>Loading student accounts...</p>}
         <table>
           <thead>
             <tr>
               <th>Name</th>
+              <th>Roll Number</th>
               <th>Branch</th>
-              <th>Year</th>
               <th>Status</th>
             </tr>
           </thead>
 
           <tbody>
             {filteredStudents.map((student) => (
-              <tr key={student.id}>
+              <tr key={student._id}>
                 <td>
                   {student.name}
                 </td>
 
                 <td>
-                  {student.branch}
+                  {student.rollNumber}
                 </td>
 
                 <td>
-                  {student.year}
+                  {student.branch}{student.section ? ` · ${student.section}` : ""}
                 </td>
 
                 <td>
                   <span className="status approved">
-                    {student.status}
+                    Active
                   </span>
                 </td>
               </tr>
@@ -919,18 +1107,25 @@ function Admin() {
       </div>
 
       <div className="table-wrap">
+        {directoryError && <p role="alert" className="login-error">{directoryError}</p>}
+        {isLoadingDirectories && <p>Loading faculty accounts...</p>}
         <table>
           <thead>
             <tr>
+              <th>Faculty ID</th>
               <th>Name</th>
               <th>Department</th>
-              <th>Role</th>
+              <th>Subject</th>
             </tr>
           </thead>
 
           <tbody>
             {filteredFaculty.map((member) => (
-              <tr key={member.id}>
+              <tr key={member._id}>
+                <td>
+                  {member.facultyId}
+                </td>
+
                 <td>
                   {member.name}
                 </td>
@@ -940,7 +1135,7 @@ function Admin() {
                 </td>
 
                 <td>
-                  {member.role}
+                  {member.subject}
                 </td>
               </tr>
             ))}
@@ -969,37 +1164,31 @@ function Admin() {
       </div>
 
       <div className="department-list">
-        {BRANCHES.map((branch, index) => (
+        {directoryError && <p role="alert" className="login-error">{directoryError}</p>}
+        {isLoadingDirectories && <p>Loading HOD accounts...</p>}
+        {hods.map((hod) => (
           <div
             className="department-row"
-            key={branch}
+            key={hod._id}
           >
             <div className="department-badge">
-              {branch}
+              {hod.department}
             </div>
 
             <div>
               <strong>
-                {branch} Department
+                {hod.department} Department
               </strong>
 
               <span>
-                HOD {index + 1} · Department administration
+                {hod.name} · HOD ID: {hod.hodId}
               </span>
             </div>
-
-            <button
-              type="button"
-              className="outline-button"
-              onClick={() => {
-                setSelectedBranch(branch);
-                setActiveSection("Requests");
-              }}
-            >
-              View Requests
-            </button>
           </div>
         ))}
+        {!isLoadingDirectories && !directoryError && hods.length === 0 && (
+          <p>No approved HOD accounts are available.</p>
+        )}
       </div>
     </section>
   );
@@ -1020,18 +1209,25 @@ function Admin() {
         </div>
       </div>
 
-      {requests.map((request) => (
+      {requestError && <p role="alert" className="login-error">{requestError}</p>}
+      {requestMessage && <p role="status">{requestMessage}</p>}
+
+      {isLoadingRequests ? (
+        <p>Loading pending HOD registrations...</p>
+      ) : requests.length === 0 ? (
+        <p>No pending HOD registration requests.</p>
+      ) : requests.map((request) => (
         <div
           className="request-card"
           key={request.id}
         >
           <div>
             <h3>
-              {request.title}
+              HOD registration: {request.title}
             </h3>
 
             <p>
-              {request.from} · {request.type}
+              {request.from} · {request.type} · {request.email}
             </p>
           </div>
 
@@ -1043,14 +1239,24 @@ function Admin() {
             </span>
 
             {request.status === "Pending" && (
-              <button
-                type="button"
-                onClick={() =>
-                  approveRequest(request.id)
-                }
-              >
-                Approve
-              </button>
+              <div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    decideHODRequest(request.id, "APPROVED")
+                  }
+                  disabled={Boolean(reviewingRequestId)}
+                >
+                  {reviewingRequestId === request.id ? "Saving..." : "Approve"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => decideHODRequest(request.id, "REJECTED")}
+                  disabled={Boolean(reviewingRequestId)}
+                >
+                  Reject
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -1358,7 +1564,7 @@ function Admin() {
       <div className="section-heading">
         <div>
           <h2>Announcements</h2>
-          <p>Publish and manage campus-wide announcements.</p>
+          <p>Publish announcements to all users or a specific account role.</p>
         </div>
         <div className="admin-manager-filters">
           <input className="search-input" type="search" placeholder="Search announcements..." value={announcementSearch} onChange={(event) => setAnnouncementSearch(event.target.value)} />
@@ -1374,7 +1580,7 @@ function Admin() {
       </div>
 
       <form className="admin-entry-form" onSubmit={addAnnouncement}>
-        <h3>New announcement</h3>
+        <h3>{editingAnnouncementId ? "Edit announcement" : "New announcement"}</h3>
         <div className="admin-entry-fields">
           <input aria-label="Announcement title" placeholder="Announcement title" value={announcementDraft.title} onChange={(event) => setAnnouncementDraft({ ...announcementDraft, title: event.target.value })} required />
           <select aria-label="Announcement category" value={announcementDraft.category} onChange={(event) => setAnnouncementDraft({ ...announcementDraft, category: event.target.value })}>
@@ -1383,31 +1589,119 @@ function Admin() {
           <select aria-label="Announcement priority" value={announcementDraft.priority} onChange={(event) => setAnnouncementDraft({ ...announcementDraft, priority: event.target.value })}>
             {announcementPriorities.map((priority) => <option key={priority} value={priority}>{priority}</option>)}
           </select>
-          <select aria-label="Announcement audience" value={announcementDraft.audience} onChange={(event) => setAnnouncementDraft({ ...announcementDraft, audience: event.target.value })}>
-            <option value="All">Everyone</option>
-            <option value="Students">Students</option>
-            <option value="Faculty">Faculty</option>
-            <option value="Staff">Staff</option>
+          <select aria-label="Announcement audience" value={announcementDraft.targetRole} onChange={(event) => setAnnouncementDraft({ ...announcementDraft, targetRole: event.target.value })}>
+            <option value="ALL">Everyone</option>
+            <option value="STUDENT">Students</option>
+            <option value="FACULTY">Faculty</option>
+            <option value="HOD">HODs</option>
+            <option value="ADMIN">Admins</option>
           </select>
+          <select
+            aria-label="Announcement department"
+            value={announcementDraft.targetDepartment}
+            onChange={(event) => setAnnouncementDraft({ ...announcementDraft, targetDepartment: event.target.value })}
+          >
+            <option value="">All departments</option>
+            {announcementDepartments.map((department) => <option key={department} value={department}>{department}</option>)}
+          </select>
+          {(announcementDraft.targetRole === "ALL" ||
+            announcementDraft.targetRole === "STUDENT" ||
+            announcementDraft.targetRole === "FACULTY") && (
+            <select
+              aria-label="Announcement branch"
+              value={announcementDraft.targetBranch}
+              onChange={(event) => setAnnouncementDraft({ ...announcementDraft, targetBranch: event.target.value, targetSection: "" })}
+            >
+              <option value="">All branches</option>
+              {announcementBranches.map((branch) => <option key={branch} value={branch}>{branch}</option>)}
+            </select>
+          )}
+          {(announcementDraft.targetRole === "ALL" ||
+            announcementDraft.targetRole === "STUDENT") && (
+            <select
+              aria-label="Announcement section"
+              value={announcementDraft.targetSection}
+              onChange={(event) => setAnnouncementDraft({ ...announcementDraft, targetSection: event.target.value })}
+            >
+              <option value="">All sections</option>
+              {announcementSections.map((section) => <option key={section} value={section}>{section}</option>)}
+            </select>
+          )}
           <input aria-label="Announcement date" type="date" value={announcementDraft.date} onChange={(event) => setAnnouncementDraft({ ...announcementDraft, date: event.target.value })} required />
+          <label>
+            Publish at (optional)
+            <input
+              aria-label="Announcement publish at"
+              type="datetime-local"
+              value={announcementDraft.publishAt}
+              onChange={(event) => setAnnouncementDraft({ ...announcementDraft, publishAt: event.target.value })}
+            />
+          </label>
+          <label>
+            Expires at (optional)
+            <input
+              aria-label="Announcement expires at"
+              type="datetime-local"
+              min={announcementDraft.publishAt || undefined}
+              value={announcementDraft.expiresAt}
+              onChange={(event) => setAnnouncementDraft({ ...announcementDraft, expiresAt: event.target.value })}
+            />
+          </label>
+          <select
+            aria-label="Announcement publication state"
+            value={announcementDraft.isActive ? "published" : "draft"}
+            onChange={(event) => setAnnouncementDraft({ ...announcementDraft, isActive: event.target.value === "published" })}
+          >
+            <option value="published">Published (or schedule it)</option>
+            <option value="draft">Draft / unpublished</option>
+          </select>
           <textarea aria-label="Announcement message" placeholder="Announcement details" value={announcementDraft.message} onChange={(event) => setAnnouncementDraft({ ...announcementDraft, message: event.target.value })} required />
         </div>
-        <button className="admin-submit-button" type="submit">Publish announcement</button>
+        <button className="admin-submit-button" type="submit" disabled={isSavingAnnouncement}>
+          {isSavingAnnouncement ? "Saving..." : editingAnnouncementId ? "Save changes" : "Save announcement"}
+        </button>
+        {editingAnnouncementId && (
+          <button
+            className="admin-delete-button"
+            type="button"
+            onClick={() => {
+              setEditingAnnouncementId("");
+              setAnnouncementDraft(createAnnouncementDraft());
+            }}
+          >
+            Cancel editing
+          </button>
+        )}
       </form>
 
+      {announcementError && <p className="admin-empty-state" role="alert">{announcementError}</p>}
+      {announcementMessage && <p className="admin-empty-state" role="status">{announcementMessage}</p>}
       <div className="admin-entry-grid">
-        {filteredAnnouncements.map((announcement) => (
+        {isLoadingAnnouncements ? (
+          <p className="admin-empty-state">Loading announcements...</p>
+        ) : filteredAnnouncements.map((announcement) => (
           <article className="admin-entry-card" key={announcement.id}>
             <div className="admin-entry-card-content">
-              <div className="admin-entry-meta"><span>{announcement.category}</span><span>{announcement.priority}</span><time dateTime={announcement.date}>{announcement.date}</time></div>
+              <div className="admin-entry-meta">
+                <span>{announcement.category}</span>
+                <span>{announcement.priority}</span>
+                <span>{!announcement.isActive ? "Draft / unpublished" : announcement.publishAt && new Date(announcement.publishAt) > new Date() ? "Scheduled" : announcement.expiresAt && new Date(announcement.expiresAt) <= new Date() ? "Expired" : "Published"}</span>
+                <time dateTime={announcement.date}>{announcement.date}</time>
+              </div>
               <h3>{announcement.title}</h3>
               <p>{announcement.message}</p>
-              <p className="admin-event-location">Audience: {announcement.audience === "All" ? "Everyone" : announcement.audience}</p>
-              <button type="button" className="admin-delete-button" onClick={() => deleteAnnouncement(announcement.id)}>Delete announcement</button>
+              <p className="admin-event-location">Audience: {announcementAudienceLabel(announcement)}</p>
+              <button type="button" className="admin-submit-button" onClick={() => editAnnouncement(announcement)}>Edit announcement</button>
+              <button type="button" className="admin-submit-button" onClick={() => toggleAnnouncementPublication(announcement)}>
+                {announcement.isActive ? "Unpublish" : "Publish"}
+              </button>
+              <button type="button" className="admin-delete-button" disabled={deletingAnnouncementId === announcement.id} onClick={() => deleteAnnouncement(announcement.id)}>
+                {deletingAnnouncementId === announcement.id ? "Deleting..." : "Delete announcement"}
+              </button>
             </div>
           </article>
         ))}
-        {filteredAnnouncements.length === 0 && <p className="admin-empty-state">No announcements match your search or filters.</p>}
+        {!isLoadingAnnouncements && !announcementError && filteredAnnouncements.length === 0 && <p className="admin-empty-state">No announcements match your search or filters.</p>}
       </div>
     </section>
   );
@@ -1524,15 +1818,6 @@ function Admin() {
         </p>
 
         <nav>
-          <button
-            type="button"
-            className="nav-item"
-            onClick={() => navigate("/")}
-          >
-            <span className="nav-icon">⌂</span>
-            <span>Home</span>
-          </button>
-
           {NAV_ITEMS.map(([name, icon]) => (
             <button
               type="button"
@@ -1615,7 +1900,7 @@ function Admin() {
                 }
               >
                 <span className="bell-icon">
-                  ♢
+                  🔔
                 </span>
 
                 {unreadNotifications > 0 && (
@@ -1674,6 +1959,11 @@ function Admin() {
             </button>
           </div>
         </header>
+
+        <PortalBackButton
+           show={activeSection !== "Dashboard" || hasSectionHistory}
+           onBack={handleSectionBack}
+        />
 
         <div className="page-title">
           <h2>

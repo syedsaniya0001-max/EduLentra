@@ -1,10 +1,17 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import "./Role.css";
+import PortalBackButton from "./PortalBackButton";
 
 function Role() {
+  const location = useLocation();
+
   return (
     <div className="role-page" id="role">
+      <PortalBackButton
+        role="public"
+        fallbackTo={location.state?.backTo || "/"}
+      />
 
       <h1 className="title">Choose Your Role</h1>
 

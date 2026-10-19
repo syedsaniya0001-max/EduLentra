@@ -226,7 +226,7 @@
    ADMIN DASHBOARD
    ========================================================= */
 
-.admin-dashboard {
+.college-app .admin-dashboard {
   min-height: 100vh;
 
   background: #f7faff;
@@ -309,7 +309,7 @@
    SIDEBAR NAVIGATION
    ========================================================= */
 
-.nav-item {
+.admin-dashboard .nav-item {
   width: 100%;
   min-height: 44px;
 
@@ -343,7 +343,7 @@
   position: relative;
 }
 
-.nav-item:hover {
+.admin-dashboard .nav-item:hover {
   background: #eef4ff;
 
   color: #2563eb;
@@ -351,13 +351,13 @@
   transform: translateX(3px);
 }
 
-.nav-item.active {
+.admin-dashboard .nav-item.active {
   background: #eef4ff;
 
   color: #1e3a8a;
 }
 
-.nav-icon {
+.admin-dashboard .nav-icon {
   width: 22px;
 
   text-align: center;
@@ -374,7 +374,7 @@
   flex-shrink: 0;
 }
 
-.nav-count {
+.admin-dashboard .nav-count {
   margin-left: auto;
 
   min-width: 20px;
@@ -396,7 +396,7 @@
   justify-content: center;
 }
 
-.logout {
+.admin-dashboard .logout {
   margin-top: 16px;
 
   border-top: 1px solid #edf2f7;
@@ -717,7 +717,7 @@
    CONTENT WRAPPER
    ========================================================= */
 
-.dashboard-content {
+.admin-dashboard .dashboard-content {
   display: flex;
 
   flex-direction: column;
@@ -729,7 +729,7 @@
    STATISTICS
    ========================================================= */
 
-.stats-grid {
+.admin-dashboard .stats-grid {
   display: grid;
 
   grid-template-columns:
@@ -738,7 +738,7 @@
   gap: 16px;
 }
 
-.stat-card {
+.admin-dashboard .stat-card {
   background: #ffffff;
 
   border: 1px solid #e2e8f0;
@@ -761,14 +761,14 @@
     box-shadow 0.25s;
 }
 
-.stat-card:hover {
+.admin-dashboard .stat-card:hover {
   transform: translateY(-3px);
 
   box-shadow:
     0 10px 22px rgba(15, 23, 42, 0.08);
 }
 
-.stat-icon {
+.admin-dashboard .stat-icon {
   width: 45px;
   height: 45px;
 
@@ -788,7 +788,7 @@
   flex-shrink: 0;
 }
 
-.stat-card div {
+.admin-dashboard .stat-card div {
   display: flex;
 
   flex-direction: column;
@@ -798,13 +798,13 @@
   min-width: 0;
 }
 
-.stat-card div span {
+.admin-dashboard .stat-card div span {
   font-size: 12px;
 
   color: #64748b;
 }
 
-.stat-card strong {
+.admin-dashboard .stat-card strong {
   font-size: 22px;
 
   color: #1e3a8a;
@@ -814,7 +814,7 @@
    COMMON CONTENT CARD
    ========================================================= */
 
-.content-card {
+.admin-dashboard .content-card {
   background: #ffffff;
 
   border: 1px solid #e2e8f0;
@@ -831,7 +831,7 @@
    SECTION HEADINGS
    ========================================================= */
 
-.section-heading {
+.admin-dashboard .section-heading {
   display: flex;
 
   justify-content: space-between;
@@ -843,7 +843,7 @@
   margin-bottom: 18px;
 }
 
-.section-heading h2 {
+.admin-dashboard .section-heading h2 {
   margin: 0;
 
   color: #1e3a8a;
@@ -851,7 +851,7 @@
   font-size: 18px;
 }
 
-.section-heading p {
+.admin-dashboard .section-heading p {
   margin: 5px 0 0;
 
   color: #64748b;
@@ -859,7 +859,7 @@
   font-size: 13px;
 }
 
-.section-heading select {
+.admin-dashboard .section-heading select {
   border: 1px solid #cbd5e1;
 
   border-radius: 7px;
@@ -875,7 +875,7 @@
   cursor: pointer;
 }
 
-.section-heading select:focus {
+.admin-dashboard .section-heading select:focus {
   border-color: #2563eb;
 }
 
@@ -1059,7 +1059,7 @@
    ACTIVITY
    ========================================================= */
 
-.activity-item {
+.admin-dashboard .activity-item {
   min-height: 58px;
 
   border-top: 1px solid #eef2f7;
@@ -1073,7 +1073,7 @@
   gap: 12px;
 }
 
-.activity-item > span {
+.admin-dashboard .activity-item > span {
   width: 30px;
   height: 30px;
 
@@ -1091,7 +1091,7 @@
   flex-shrink: 0;
 }
 
-.activity-item div {
+.admin-dashboard .activity-item div {
   display: flex;
 
   flex-direction: column;
@@ -1099,13 +1099,13 @@
   gap: 4px;
 }
 
-.activity-item strong {
+.admin-dashboard .admin-dashboard .activity-item strong {
   font-size: 13px;
 
   color: #334155;
 }
 
-.activity-item small {
+.admin-dashboard .admin-dashboard .activity-item small {
   font-size: 12px;
 
   color: #94a3b8;
@@ -1115,7 +1115,7 @@
    SEARCH
    ========================================================= */
 
-.search-input {
+.admin-dashboard .search-input {
   width: 220px;
 
   border: 1px solid #cbd5e1;
@@ -1133,7 +1133,7 @@
   font-size: 13px;
 }
 
-.search-input:focus {
+.admin-dashboard .search-input:focus {
   border-color: #2563eb;
 
   box-shadow:
@@ -1185,13 +1185,13 @@
    TABLE
    ========================================================= */
 
-.table-wrap {
+.admin-dashboard .table-wrap {
   overflow-x: auto;
 
   width: 100%;
 }
 
-table {
+.admin-dashboard table {
   width: 100%;
 
   border-collapse: collapse;
@@ -1199,8 +1199,8 @@ table {
   min-width: 500px;
 }
 
-th,
-td {
+.admin-dashboard th,
+.admin-dashboard td {
   text-align: left;
 
   padding: 13px 10px;
@@ -1210,7 +1210,7 @@ td {
   font-size: 13px;
 }
 
-th {
+.admin-dashboard th {
   font-size: 11px;
 
   text-transform: uppercase;
@@ -1220,17 +1220,17 @@ th {
   color: #94a3b8;
 }
 
-td {
+.admin-dashboard td {
   color: #475569;
 }
 
-td:first-child {
+.admin-dashboard td:first-child {
   font-weight: 600;
 
   color: #334155;
 }
 
-tbody tr:hover {
+.admin-dashboard tbody tr:hover {
   background: #f8fbff;
 }
 
@@ -1494,7 +1494,7 @@ tbody tr:hover {
   gap: 12px;
 }
 
-.notification-dot {
+.admin-dashboard .notification-dot {
   width: 8px;
   height: 8px;
 
@@ -1623,7 +1623,7 @@ tbody tr:hover {
     padding: 0 22px 35px;
   }
 
-  .stats-grid {
+  .admin-dashboard .stats-grid {
     grid-template-columns:
       repeat(2, 1fr);
   }
@@ -1660,22 +1660,22 @@ tbody tr:hover {
   }
 
   .sidebar-label,
-  .nav-item > span:not(.nav-icon),
-  .nav-count {
+  .admin-dashboard .nav-item > span:not(.nav-icon),
+  .admin-dashboard .nav-count {
     display: none;
   }
 
-  .nav-item {
+  .admin-dashboard .nav-item {
     justify-content: center;
 
     padding: 11px 0;
   }
 
-  .nav-icon {
+  .admin-dashboard .nav-icon {
     width: 100%;
   }
 
-  .logout {
+  .admin-dashboard .logout {
     margin-top: 10px;
   }
 
@@ -2076,5 +2076,326 @@ tbody tr:hover {
 
   .admin-entry-fields textarea {
     grid-column: auto;
+  }
+}
+
+/* Keep the admin portal within the student dashboard visual system. */
+.college-app .admin-dashboard {
+  background:
+    radial-gradient(circle at 85% 10%, rgba(37, 99, 235, 0.08), transparent 28%),
+    radial-gradient(circle at 15% 90%, rgba(6, 182, 212, 0.07), transparent 25%),
+    linear-gradient(135deg, #f8fbff 0%, #f4f7fc 50%, #eef4ff 100%);
+  color: #172033;
+  font: 14px Arial, Helvetica, sans-serif;
+}
+
+.admin-dashboard .admin-sidebar {
+  width: 250px;
+  padding: 25px 18px;
+  box-shadow: 6px 0 25px rgba(23, 59, 114, 0.06);
+}
+
+.admin-dashboard .sidebar-label {
+  color: #64748b;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+}
+
+.admin-dashboard .admin-sidebar nav {
+  gap: 7px;
+}
+
+.admin-dashboard .nav-item {
+  padding: 13px 15px;
+  border-radius: 11px;
+  gap: 13px;
+  color: #475569;
+  font: 600 14px Arial, Helvetica, sans-serif;
+}
+
+.admin-dashboard .nav-item:hover {
+  background: #eff6ff;
+  color: #2563eb;
+  transform: translateX(2px);
+}
+
+.admin-dashboard .nav-item.active {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
+}
+
+.college-app .admin-dashboard .nav-item.active {
+  border-color: #e2e8f0;
+  background: #eff6ff;
+  color: #173b72;
+  box-shadow: none;
+}
+
+.college-app .admin-dashboard .nav-icon {
+  width: 22px;
+  font-size: 18px;
+  color: #1e3a8a;
+}
+
+.college-app .admin-dashboard nav .nav-item:nth-child(1) .nav-icon { color: #2563eb; }
+.college-app .admin-dashboard nav .nav-item:nth-child(2) .nav-icon { color: #2563eb; }
+.college-app .admin-dashboard nav .nav-item:nth-child(3) .nav-icon { color: #7c3aed; }
+.college-app .admin-dashboard nav .nav-item:nth-child(4) .nav-icon { color: #16a34a; }
+.college-app .admin-dashboard nav .nav-item:nth-child(5) .nav-icon { color: #2563eb; }
+.college-app .admin-dashboard nav .nav-item:nth-child(6) .nav-icon { color: #d97706; }
+.college-app .admin-dashboard nav .nav-item:nth-child(7) .nav-icon { color: #7c3aed; }
+.college-app .admin-dashboard nav .nav-item:nth-child(8) .nav-icon { color: #2563eb; }
+.college-app .admin-dashboard nav .nav-item:nth-child(9) .nav-icon { color: #dc2626; }
+.college-app .admin-dashboard nav .nav-item:nth-child(10) .nav-icon { color: #d97706; }
+.college-app .admin-dashboard nav .nav-item:nth-child(11) .nav-icon { color: #2563eb; }
+
+.college-app .admin-dashboard nav .nav-icon {
+  width: 22px;
+}
+
+.admin-dashboard .logout {
+  margin-top: 16px;
+  border-top: 1px solid #e2e8f0;
+  border-radius: 0;
+  padding-top: 17px;
+}
+
+.admin-dashboard .admin-main {
+  padding: 28px 28px 40px;
+}
+
+.admin-dashboard .dashboard-header {
+  min-height: 125px;
+  margin-bottom: 25px;
+  padding: 25px 30px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(23, 59, 114, 0.07);
+}
+
+.admin-dashboard .greeting h1 {
+  color: #173b72;
+  font-size: 27px;
+  line-height: 1.25;
+}
+
+.admin-dashboard .greeting p {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.admin-dashboard .dashboard-content {
+  gap: 25px;
+}
+
+.admin-dashboard .page-title {
+  padding: 0 0 18px;
+}
+
+.admin-dashboard .page-title h2 {
+  color: #173b72;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.admin-dashboard .page-title span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.admin-dashboard .stats-grid {
+  gap: 18px;
+}
+
+.admin-dashboard .stat-card,
+.admin-dashboard .content-card,
+.admin-dashboard .branch-card,
+.admin-dashboard .feature-card,
+.admin-dashboard .request-card,
+.admin-dashboard .profile-card {
+  border-color: #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 12px 30px rgba(23, 59, 114, 0.07);
+}
+
+.admin-dashboard .stat-card {
+  padding: 22px;
+}
+
+.admin-dashboard .stat-card:hover,
+.admin-dashboard .feature-card:hover,
+.admin-dashboard .branch-card:hover {
+  box-shadow: 0 16px 35px rgba(23, 59, 114, 0.1);
+}
+
+.college-app .admin-dashboard .stat-icon {
+  width: 45px;
+  height: 45px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 21px;
+}
+
+.college-app .admin-dashboard .activity-item > span {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.college-app .admin-dashboard .icon-button {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.college-app .admin-dashboard .icon-button:hover {
+  border-color: #2563eb;
+  background: #dbeafe;
+}
+
+.college-app .admin-dashboard .bell-icon {
+  color: #d97706;
+  font-weight: 700;
+}
+
+.college-app .admin-dashboard .profile-symbol {
+  border: 2px solid #1e3a8a;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.admin-dashboard .stat-card div span {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.admin-dashboard .stat-card strong {
+  color: #173b72;
+}
+
+.admin-dashboard .content-card {
+  padding: 25px;
+}
+
+.admin-dashboard .section-heading h2 {
+  color: #173b72;
+  font-size: 18px;
+}
+
+.admin-dashboard .section-heading p {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.admin-dashboard .activity-item strong,
+.admin-dashboard .branch-card strong,
+.admin-dashboard .feature-card h3 {
+  color: #172033;
+}
+
+.admin-dashboard .activity-item small,
+.admin-dashboard .branch-card small,
+.admin-dashboard .feature-card p {
+  color: #64748b;
+}
+
+@media (max-width: 1100px) {
+  .admin-dashboard .admin-sidebar {
+    width: 215px;
+  }
+}
+
+@media (max-width: 800px) {
+  .admin-dashboard {
+    flex-direction: column;
+  }
+
+  .admin-dashboard .admin-sidebar {
+    width: 100%;
+    min-height: auto;
+    position: relative;
+  }
+
+  .admin-dashboard .admin-sidebar nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-dashboard .sidebar-label {
+    display: block;
+  }
+
+  .admin-dashboard .sidebar-logo {
+    font-size: 24px;
+    text-align: left;
+  }
+
+  .admin-dashboard .sidebar-logo::before {
+    content: none;
+  }
+
+  .admin-dashboard .nav-item > span:not(.nav-icon),
+  .admin-dashboard .nav-count {
+    display: inline;
+  }
+
+  .admin-dashboard .nav-item {
+    justify-content: flex-start;
+    padding: 13px 15px;
+  }
+
+  .admin-dashboard .nav-icon {
+    width: 22px;
+  }
+
+  .admin-dashboard .admin-main {
+    padding: 15px;
+  }
+
+  .admin-dashboard .dashboard-header {
+    min-height: 0;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .admin-dashboard .greeting p {
+    display: block;
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-dashboard .admin-sidebar nav {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-dashboard .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-dashboard .header-actions {
+    gap: 7px;
+  }
+
+  .admin-dashboard .page-title {
+    padding: 20px 0 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-dashboard .admin-sidebar {
+    width: 100%;
+    padding: 20px 12px;
+  }
+
+  .admin-dashboard .admin-main {
+    padding: 15px;
   }
 }

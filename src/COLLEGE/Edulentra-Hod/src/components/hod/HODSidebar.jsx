@@ -7,11 +7,6 @@ function HODSidebar() {
 
   const menuItems = [
     {
-      label: "Home",
-      path: "/",
-      icon: "⌂",
-    },
-    {
       label: "Dashboard",
       path: "/hod/dashboard",
       icon: "▦",

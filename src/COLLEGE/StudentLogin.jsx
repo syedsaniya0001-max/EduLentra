@@ -1,6 +1,9 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../api/config";
+import { storeAuthSession } from "../api/authSession";
 import "./StudentLogin.css";
+import PortalBackButton from "./PortalBackButton";
 
 import bookCover from "../assets/BOOK-NEW.png";
 import goldKey from "../assets/key.png";
@@ -98,219 +101,135 @@ function StudentLogin() {
        LOGIN
     ========================= */
 
-    const handleLogin = (e) => {
+  const handleLogin = async (e) => {
+    e.preventDefault();
 
-        e.preventDefault();
+    if (
+        !loginData.rollNumber.trim() ||
+        !loginData.password.trim()
+    ) {
+        alert("Please enter Roll Number and Password.");
+        return;
+    }
 
-        if (
-            !loginData.rollNumber.trim() ||
-            !loginData.password.trim()
-        ) {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/api/auth/login`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    username: loginData.rollNumber.trim(),
+                    password: loginData.password,
+                    role: "student",
+                }),
+            }
+        );
 
-            alert(
-                "Please enter Roll Number and Password."
-            );
+        const data = await response.json();
 
+        if (!response.ok || !data.token) {
+            alert(data.message || "Login failed. Please check your credentials.");
             return;
         }
 
-        /*
-         * LOGIN BACKEND CAN BE CONNECTED HERE.
-         */
+        storeAuthSession(data, "student");
 
         alert("Login successful!");
         navigate("/student-dashboard");
-    };
+
+    } catch (error) {
+        console.error("Student login error:", error);
+
+        alert(
+            "Unable to connect to the server. Please make sure the EduLentra backend is running on port 5000."
+        );
+    }
+};
 
 
     /* =========================
        SIGNUP
     ========================= */
+const handleSignup = async (e) => {
+    e.preventDefault();
 
-    const handleSignup = (e) => {
+    // Check empty fields
+    if (
+        !signupData.name.trim() ||
+        !signupData.rollNumber.trim() ||
+        !signupData.email.trim() ||
+        !signupData.department.trim() ||
+        !signupData.section.trim() ||
+        !signupData.studentType ||
+        !signupData.password ||
+        !signupData.confirmPassword
+    ) {
+        alert("Please fill all the registration fields.");
+        return;
+    }
 
-        e.preventDefault();
+    // Check password confirmation
+    if (signupData.password !== signupData.confirmPassword) {
+        alert("Passwords do not match.");
+        return;
+    }
 
-        /* =========================
-           CHECK EMPTY FIELDS
-        ========================= */
-
-        if (
-            !signupData.name.trim() ||
-            !signupData.rollNumber.trim() ||
-            !signupData.email.trim() ||
-            !signupData.department.trim() ||
-            !signupData.section.trim() ||
-            !signupData.studentType ||
-            !signupData.password ||
-            !signupData.confirmPassword
-        ) {
-
-            alert(
-                "Please fill all the registration fields."
-            );
-
-            return;
-        }
-
-
-        /* =========================
-           PASSWORD CHECK
-        ========================= */
-
-        if (
-            signupData.password !==
-            signupData.confirmPassword
-        ) {
-
-            alert(
-                "Passwords do not match."
-            );
-
-            return;
-        }
-
-
-        /* =========================
-           SAVE PENDING REGISTRATION
-           
-           This is temporary frontend
-           storage until backend is added.
-        ========================= */
-
-        const registrationDetails = {
-
-            name: signupData.name.trim(),
-
-            rollNumber:
-                signupData.rollNumber.trim(),
-
-            email:
-                signupData.email.trim(),
-
-            department:
-                signupData.department.trim(),
-
-            section:
-                signupData.section.trim(),
-
-            studentType:
-                signupData.studentType,
-
-            /*
-             * IMPORTANT:
-             * In a real application NEVER store
-             * plain passwords in localStorage.
-             *
-             * This field is intentionally omitted
-             * from the pending authority record.
-             */
-
-            status: "Pending Approval",
-
-            submittedAt:
-                new Date().toISOString()
-        };
-
-
-        /* =========================
-           GET EXISTING PENDING USERS
-        ========================= */
-
-        let pendingStudents = [];
-
-        try {
-
-            const existingData =
-                localStorage.getItem(
-                    "pendingStudentRegistrations"
-                );
-
-            if (existingData) {
-
-                pendingStudents =
-                    JSON.parse(existingData);
-
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/api/students/signup`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    name: signupData.name.trim(),
+                    rollNumber: signupData.rollNumber.trim(),
+                    email: signupData.email.trim(),
+                    branch: signupData.department.trim(),
+                    section: signupData.section.trim(),
+                    entryType: signupData.studentType,
+                    password: signupData.password,
+                }),
             }
-
-        } catch (error) {
-
-            console.error(
-                "Unable to read pending registrations:",
-                error
-            );
-
-            pendingStudents = [];
-        }
-
-
-        /* =========================
-           ADD NEW REGISTRATION
-        ========================= */
-
-        pendingStudents.push(
-            registrationDetails
         );
 
+        const data = await response.json();
 
-        /* =========================
-           SAVE FOR AUTHORITY
-        ========================= */
-
-        try {
-
-            localStorage.setItem(
-                "pendingStudentRegistrations",
-                JSON.stringify(
-                    pendingStudents
-                )
-            );
-
-        } catch (error) {
-
-            console.error(
-                "Unable to save registration:",
-                error
-            );
+        if (!response.ok) {
+            alert(data.message || "Registration failed. Please try again.");
+            return;
         }
-
-
-        /* =========================
-           SUCCESS MESSAGE
-        ========================= */
 
         alert(
-            "Registration details sent successfully!\n\n" +
-            "Your details have been submitted for approval.\n\n" +
-            "Please wait for approval from your Class Teacher / Authority."
+            data.message ||
+            "Your signup request is pending Faculty approval. After approval, sign in with your roll number and the password you chose."
         );
 
+        // Clear signup details
+        setSignupData(emptySignupData);
 
-        /* =========================
-           CLEAR ALL SIGNUP DETAILS
-        ========================= */
-
-        setSignupData(
-            emptySignupData
-        );
-
-
-        /* =========================
-           CLEAR LOGIN DETAILS TOO
-        ========================= */
-
+        // Clear login details
         setLoginData({
             rollNumber: "",
-            password: ""
+            password: "",
         });
 
-
-        /* =========================
-           RETURN TO LOGIN
-        ========================= */
-
+        // Return to login form
         setShowSignup(false);
-    };
+
+    } catch (error) {
+        console.error("Student signup error:", error);
+
+        alert(
+            "Unable to connect to the server. " +
+            "Please make sure the EduLentra backend is running on port 5000."
+        );
+    }
+};
 
 
     /* =========================
@@ -344,6 +263,9 @@ function StudentLogin() {
     return (
 
         <div className="student-login-page">
+            {!showSignup && (
+                <PortalBackButton role="student" fallbackTo="/role" />
+            )}
 
             {/* =========================
                TITLE
@@ -432,6 +354,13 @@ function StudentLogin() {
                                     }
                                     autoComplete="current-password"
                                 />
+
+                                <Link
+                                    className="password-recovery-link"
+                                    to="/forgot-password?role=student"
+                                >
+                                    Forgot Password?
+                                </Link>
 
 
                                 {/* LOGIN BUTTON */}
@@ -611,6 +540,7 @@ function StudentLogin() {
                                     type="password"
                                     name="password"
                                     placeholder="Create Password"
+                                    minLength={8}
                                     value={
                                         signupData.password
                                     }
@@ -629,6 +559,7 @@ function StudentLogin() {
                                     type="password"
                                     name="confirmPassword"
                                     placeholder="Confirm Password"
+                                    minLength={8}
                                     value={
                                         signupData.confirmPassword
                                     }
@@ -649,25 +580,16 @@ function StudentLogin() {
                                     Register
                                 </button>
 
+                                <button
+                                    type="button"
+                                    className="student-secondary-btn"
+                                    onClick={openLogin}
+                                >
+                                    Back to Login
+                                </button>
+
                             </form>
 
-
-                            {/* ACCOUNT TEXT */}
-
-                            <p className="student-account-text">
-                                Already have an account?
-                            </p>
-
-
-                            {/* LOGIN BUTTON */}
-
-                            <button
-                                type="button"
-                                className="student-secondary-btn"
-                                onClick={openLogin}
-                            >
-                                Login
-                            </button>
 
                         </div>
 
