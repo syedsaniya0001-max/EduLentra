@@ -150,4 +150,54 @@ describe("role-aware announcement flows", () => {
     expect(await screen.findByText("Student orientation")).not.toBeNull();
     expect(screen.getByRole("status").textContent).toMatch(/published/i);
   });
+
+  it("lets an administrator load, unpublish, edit, and delete an announcement", async () => {
+    const user = userEvent.setup();
+    const initialAnnouncement = {
+      ...studentAnnouncement,
+      id: "managed-notice",
+      isActive: true,
+      publishAt: null,
+      expiresAt: null,
+    };
+    apiMocks.getAll.mockResolvedValue([initialAnnouncement]);
+    apiMocks.update.mockImplementation(async (_id, values) => ({
+      ...initialAnnouncement,
+      ...values,
+    }));
+    apiMocks.remove.mockResolvedValue({ message: "Announcement deleted." });
+    renderInRouter(<Admin />);
+
+    await user.type(screen.getByPlaceholderText("Admin ID"), "campus-admin");
+    await user.type(screen.getByPlaceholderText("Password"), "valid-password");
+    await user.click(screen.getByRole("button", { name: "Login" }));
+    await user.click(await screen.findByRole("button", { name: /announcements/i }));
+    expect(await screen.findByText(/Student exam schedule/)).not.toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Unpublish" }));
+    expect(apiMocks.update).toHaveBeenLastCalledWith(
+      "managed-notice",
+      expect.objectContaining({ isActive: false })
+    );
+    expect((await screen.findAllByText("Draft / unpublished")).length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole("button", { name: "Edit announcement" }));
+    const titleInput = screen.getByLabelText("Announcement title");
+    await user.clear(titleInput);
+    await user.type(titleInput, "Updated student notice");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(apiMocks.update).toHaveBeenLastCalledWith(
+      "managed-notice",
+      expect.objectContaining({
+        title: "Updated student notice",
+        targetRole: "STUDENT",
+      })
+    );
+    expect(await screen.findByText("Updated student notice")).not.toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Delete announcement" }));
+    expect(apiMocks.remove).toHaveBeenCalledWith("managed-notice");
+    expect(await screen.findByText("No announcements match your search or filters."))
+      .not.toBeNull();
+  });
 });
