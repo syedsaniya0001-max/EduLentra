@@ -4,153 +4,115 @@ import { facultyApi } from "../../../api/facultyApi";
 export default function FacultyOverview({ faculty, onNavigate }) {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    loadDashboard();
+    let cancelled = false;
+    facultyApi.getDashboard()
+      .then((data) => {
+        if (!cancelled) setDashboardData(data);
+      })
+      .catch((loadError) => {
+        if (!cancelled) {
+          setError(loadError.message || "Unable to load faculty dashboard.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const loadDashboard = async () => {
-    try {
-      setLoading(true);
-      const data = await facultyApi.getDashboard();
-      setDashboardData(data);
-    } catch (err) {
-      console.error("Dashboard error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const stats = dashboardData?.stats;
 
-  const stats = dashboardData?.stats || {
-    totalStudents: 142,
-    classesToday: 3,
-    pendingOutpasses: 2,
-    activeAssignments: 1,
-    totalNotes: 3,
-    avgAttendance: 87.4
-  };
-
-  const schedule = dashboardData?.todaySchedule || [];
+  const weekday = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(new Date());
+  const schedule = (dashboardData?.timetable || [])
+    .filter((entry) => entry.day === weekday)
+    .sort((first, second) => first.startTime.localeCompare(second.startTime));
   const activities = dashboardData?.recentActivities || [];
 
   return (
     <div className="fac-overview-container">
+      {error && <p role="alert">{error}</p>}
       {/* Banner */}
-      <div
-        style={{
-          background: "linear-gradient(135deg, #1e3a8a, #2563eb)",
-          borderRadius: "16px",
-          padding: "24px 28px",
-          color: "white",
-          marginBottom: "24px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "16px",
-          boxShadow: "0 8px 20px rgba(37, 99, 235, 0.2)"
-        }}
-      >
+      <div className="fac-overview-banner">
         <div>
-          <span
-            style={{
-              fontSize: "12px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "1px",
-              background: "rgba(255,255,255,0.2)",
-              padding: "4px 10px",
-              borderRadius: "9999px"
-            }}
-          >
+          <span className="fac-session-badge">
             Academic Session 2026 - Odd Semester
           </span>
-          <h2 style={{ fontSize: "24px", fontWeight: 800, margin: "10px 0 4px 0" }}>
-            Welcome back, {faculty?.name || "Professor"}! 🎓
+          <h2 className="fac-overview-title">
+            Welcome back, {faculty?.name || faculty?.username || "Faculty"}! 🎓
           </h2>
-          <p style={{ margin: 0, opacity: 0.9, fontSize: "14px" }}>
-            {faculty?.department || "Department of Computer Science & Engineering"} | {faculty?.designation || "Faculty Advisor"}
+          <p className="fac-overview-subtitle">
+            {faculty?.department || "Department not provided"}{faculty?.designation ? ` | ${faculty.designation}` : ""}
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div className="fac-overview-actions">
           <button
             onClick={() => onNavigate("attendance")}
-            style={{
-              background: "white",
-              color: "#1e3a8a",
-              border: "none",
-              padding: "10px 18px",
-              borderRadius: "8px",
-              fontWeight: 700,
-              fontSize: "13.5px",
-              cursor: "pointer",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.1)"
-            }}
+            className="fac-overview-button"
           >
             📅 Mark Attendance
           </button>
           <button
             onClick={() => onNavigate("outpass")}
-            style={{
-              background: stats.pendingOutpasses > 0 ? "#ef4444" : "rgba(255,255,255,0.15)",
-              color: "white",
-              border: "none",
-              padding: "10px 18px",
-              borderRadius: "8px",
-              fontWeight: 700,
-              fontSize: "13.5px",
-              cursor: "pointer"
-            }}
+            className={`fac-overview-button ${stats?.pendingOutpasses > 0 ? "has-pending" : ""}`}
           >
-            🎫 Outpasses ({stats.pendingOutpasses} Pending)
+            🎫 Outpasses ({stats?.pendingOutpasses ?? (loading ? "Loading..." : "Unavailable")} Pending)
           </button>
         </div>
       </div>
 
       {/* KPI Stats Grid */}
       <div className="fac-stats-grid">
-        <div className="fac-stat-card" onClick={() => onNavigate("students")} style={{ cursor: "pointer" }}>
+        <button type="button" className="fac-stat-card" onClick={() => onNavigate("students")} style={{ cursor: "pointer", textAlign: "left" }}>
           <div className="fac-stat-icon-wrapper fac-stat-icon-blue">👥</div>
           <div>
-            <div className="fac-stat-value">{stats.totalStudents}</div>
+          <div className="fac-stat-value">{stats?.totalStudents ?? (loading ? "Loading..." : "Unavailable")}</div>
             <div className="fac-stat-label">Students Enrolled</div>
           </div>
-        </div>
+        </button>
 
-        <div className="fac-stat-card" onClick={() => onNavigate("attendance")} style={{ cursor: "pointer" }}>
+        <button type="button" className="fac-stat-card" onClick={() => onNavigate("attendance")} style={{ cursor: "pointer", textAlign: "left" }}>
           <div className="fac-stat-icon-wrapper fac-stat-icon-green">📊</div>
           <div>
-            <div className="fac-stat-value">{stats.avgAttendance}%</div>
-            <div className="fac-stat-label">Avg Attendance</div>
+          <div className="fac-stat-value">
+            {stats?.avgAttendance == null
+              ? (loading ? "Loading..." : "No records")
+              : `${stats.avgAttendance}%`}
           </div>
+          <div className="fac-stat-label">Avg Attendance</div>
         </div>
+        </button>
 
-        <div className="fac-stat-card" onClick={() => onNavigate("outpass")} style={{ cursor: "pointer" }}>
-          <div className="fac-stat-icon-wrapper fac-stat-icon-amber">🎫</div>
-          <div>
-            <div className="fac-stat-value" style={{ color: stats.pendingOutpasses > 0 ? "#b45309" : "inherit" }}>
-              {stats.pendingOutpasses}
-            </div>
-            <div className="fac-stat-label">Pending Outpass</div>
+        <button type="button" className="fac-stat-card" onClick={() => onNavigate("outpass")} style={{ cursor: "pointer", textAlign: "left" }}>
+        <div className="fac-stat-icon-wrapper fac-stat-icon-amber">🎫</div>
+        <div>
+          <div className="fac-stat-value" style={{ color: stats?.pendingOutpasses > 0 ? "#b45309" : "inherit" }}>
+            {stats?.pendingOutpasses ?? (loading ? "Loading..." : "Unavailable")}
           </div>
+          <div className="fac-stat-label">Pending Outpass</div>
         </div>
+        </button>
 
-        <div className="fac-stat-card" onClick={() => onNavigate("assignments")} style={{ cursor: "pointer" }}>
-          <div className="fac-stat-icon-wrapper fac-stat-icon-purple">📝</div>
-          <div>
-            <div className="fac-stat-value">{stats.activeAssignments}</div>
-            <div className="fac-stat-label">Active Assignments</div>
-          </div>
+        <button type="button" className="fac-stat-card" onClick={() => onNavigate("assignments")} style={{ cursor: "pointer", textAlign: "left" }}>
+        <div className="fac-stat-icon-wrapper fac-stat-icon-purple">📝</div>
+        <div>
+          <div className="fac-stat-value">{stats?.activeAssignments ?? (loading ? "Loading..." : "Unavailable")}</div>
+          <div className="fac-stat-label">Active Assignments</div>
         </div>
+        </button>
 
-        <div className="fac-stat-card" onClick={() => onNavigate("notes")} style={{ cursor: "pointer" }}>
-          <div className="fac-stat-icon-wrapper fac-stat-icon-blue">📚</div>
-          <div>
-            <div className="fac-stat-value">{stats.totalNotes}</div>
-            <div className="fac-stat-label">Notes & Materials</div>
-          </div>
+        <button type="button" className="fac-stat-card" onClick={() => onNavigate("notes")} style={{ cursor: "pointer", textAlign: "left" }}>
+        <div className="fac-stat-icon-wrapper fac-stat-icon-blue">📚</div>
+        <div>
+          <div className="fac-stat-value">{stats?.totalNotes ?? (loading ? "Loading..." : "Unavailable")}</div>
+          <div className="fac-stat-label">Notes & Materials</div>
         </div>
+        </button>
       </div>
 
       {/* Quick Action Shortcuts */}
@@ -185,48 +147,54 @@ export default function FacultyOverview({ faculty, onNavigate }) {
             <h3 className="fac-card-title">
               <span>🕒</span> Today's Teaching Schedule
             </h3>
-            <span className="fac-badge fac-badge-blue">3 Lectures Today</span>
+            {dashboardData?.timetableConfigured && (
+              <span className="fac-badge fac-badge-blue">
+                {schedule.length} {schedule.length === 1 ? "Class" : "Classes"} Today
+              </span>
+            )}
+            <button
+              className="fac-btn secondary"
+              onClick={() => onNavigate("timetable")}
+              type="button"
+            >
+              Manage timetable
+            </button>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {!loading && !error && !dashboardData?.timetableConfigured && (
+              <p role="status">
+                Add your recurring weekly classes to configure your timetable.
+              </p>
+            )}
+            {!loading && !error && dashboardData?.timetableConfigured && !schedule.length && (
+              <p role="status">No classes are scheduled for today.</p>
+            )}
             {schedule.map((item) => (
               <div
-                key={item.id}
+                key={item._id}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
                   padding: "14px",
                   borderRadius: "10px",
-                  background: item.status === "Completed" ? "#f8fafc" : "#ffffff",
+                  background: "#ffffff",
                   border: "1px solid var(--fac-border)",
-                  borderLeft: `4px solid ${
-                    item.status === "Completed" ? "#10b981" : item.status === "Upcoming" ? "#2563eb" : "#f59e0b"
-                  }`
+                  borderLeft: "4px solid #2563eb"
                 }}
               >
                 <div>
-                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#2563eb" }}>{item.time}</div>
-                  <div style={{ fontSize: "14.5px", fontWeight: 700, color: "#0f172a", marginTop: "3px" }}>
+                  <div style={{ fontSize: "13px", fontWeight: 700, color: "#2563eb" }}>
+                    {item.startTime}–{item.endTime}
+                  </div>
+                  <div style={{ fontSize: "15px", fontWeight: 700, color: "#172033", marginTop: "3px" }}>
                     {item.subject}
                   </div>
-                  <div style={{ fontSize: "12.5px", color: "#64748b", marginTop: "2px" }}>
-                    {item.class} • <span style={{ fontWeight: 600 }}>{item.room}</span>
+                  <div style={{ fontSize: "13px", color: "#64748b", marginTop: "2px" }}>
+                    {item.branch} · Section {item.section}
+                    {item.room ? <> · <span style={{ fontWeight: 600 }}>{item.room}</span></> : ""}
                   </div>
-                </div>
-
-                <div>
-                  {item.attendanceMarked ? (
-                    <span className="fac-badge fac-badge-green">✓ Attendance Done</span>
-                  ) : (
-                    <button
-                      onClick={() => onNavigate("attendance")}
-                      className="fac-btn primary"
-                      style={{ padding: "6px 12px", fontSize: "12px" }}
-                    >
-                      Take Attendance
-                    </button>
-                  )}
                 </div>
               </div>
             ))}
@@ -239,10 +207,12 @@ export default function FacultyOverview({ faculty, onNavigate }) {
             <h3 className="fac-card-title">
               <span>⚡</span> Recent System Activity
             </h3>
-            <span style={{ fontSize: "12px", color: "#64748b" }}>Live</span>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            {!loading && !error && !activities.length && (
+              <p role="status">No recent activity is available.</p>
+            )}
             {activities.map((act) => (
               <div key={act.id} style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
                 <div
@@ -274,10 +244,10 @@ export default function FacultyOverview({ faculty, onNavigate }) {
                     : "📅"}
                 </div>
                 <div>
-                  <div style={{ fontSize: "13px", fontWeight: 600, color: "#1e293b", lineHeight: 1.4 }}>
+                  <div style={{ fontSize: "14px", fontWeight: 600, color: "#172033", lineHeight: 1.5 }}>
                     {act.text}
                   </div>
-                  <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "2px" }}>{act.time}</div>
+                  <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>{act.time}</div>
                 </div>
               </div>
             ))}

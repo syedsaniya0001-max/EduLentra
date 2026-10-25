@@ -1,6 +1,20 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { clearAuthSession } from "../api/authSession";
+import { announcementsApi } from "../api/announcementsApi";
+import { complaintsApi } from "../api/complaintsApi";
+import { outpassesApi } from "../api/outpassesApi";
+import { suggestionsApi } from "../api/suggestionsApi";
+import { studentApi } from "../api/studentApi";
+import { attendanceApi } from "../api/attendanceApi";
+import { assignmentsApi } from "../api/assignmentsApi";
+import { studyMaterialsApi } from "../api/studyMaterialsApi";
+import { placementsApi } from "../api/placementsApi";
+import { eventsApi } from "../api/eventsApi";
+import { galleryApi } from "../api/galleryApi";
+import { studentTasksApi } from "../api/studentTasksApi";
 import "./StudentDashboard.css";
+import PortalBackButton from "./PortalBackButton";
 
 
 /* =========================================================
@@ -285,6 +299,11 @@ const formatDisplayDate = (dateKey) => {
 
 function StudentDashboard() {
     const navigate = useNavigate();
+    const handleLogout = () => {
+        clearAuthSession();
+        navigate("/student", { replace: true });
+    };
+    const sectionHistory = useRef([]);
 
     /* =====================================================
        GENERAL DASHBOARD STATE
@@ -292,41 +311,63 @@ function StudentDashboard() {
 
     const [activeSection, setActiveSection] =
         useState("dashboard");
+    const [studentProfile, setStudentProfile] = useState(() => {
+        try {
+            return JSON.parse(sessionStorage.getItem("edulentraUser") || "null");
+        } catch {
+            return null;
+        }
+    });
+    const [studentProfileError, setStudentProfileError] = useState("");
+    const [studentAttendance, setStudentAttendance] = useState(null);
+    const [studentAttendanceError, setStudentAttendanceError] = useState("");
+    const [isLoadingStudentAttendance, setIsLoadingStudentAttendance] = useState(true);
+    const [studentAssignments, setStudentAssignments] = useState([]);
+    const [isLoadingAssignments, setIsLoadingAssignments] = useState(false);
+    const [assignmentError, setAssignmentError] = useState("");
+    const [assignmentSuccess, setAssignmentSuccess] = useState("");
+    const [assignmentAnswers, setAssignmentAnswers] = useState({});
+    const [assignmentAttachmentUrls, setAssignmentAttachmentUrls] = useState({});
+    const [submittingAssignmentId, setSubmittingAssignmentId] = useState("");
+    const [studyMaterials, setStudyMaterials] = useState([]);
+    const [isLoadingStudyMaterials, setIsLoadingStudyMaterials] = useState(false);
+    const [studyMaterialsError, setStudyMaterialsError] = useState("");
+    const [studentPlacements, setStudentPlacements] = useState([]);
+    const [isLoadingPlacements, setIsLoadingPlacements] = useState(false);
+    const [placementsError, setPlacementsError] = useState("");
+    const [campusEvents, setCampusEvents] = useState([]);
+    const [isLoadingCampusEvents, setIsLoadingCampusEvents] = useState(false);
+    const [campusEventsError, setCampusEventsError] = useState("");
+    const [galleryPosts, setGalleryPosts] = useState([]);
+    const [isLoadingGallery, setIsLoadingGallery] = useState(false);
+    const [galleryError, setGalleryError] = useState("");
+    const [announcements, setAnnouncements] = useState([]);
+    const [isLoadingAnnouncements, setIsLoadingAnnouncements] = useState(true);
+    const [announcementError, setAnnouncementError] = useState("");
 
     const [complaint, setComplaint] =
         useState("");
+    const [complaintSubject, setComplaintSubject] = useState("");
+    const [studentComplaints, setStudentComplaints] = useState([]);
+    const [isLoadingComplaints, setIsLoadingComplaints] = useState(false);
+    const [isSubmittingComplaint, setIsSubmittingComplaint] = useState(false);
+    const [complaintError, setComplaintError] = useState("");
+    const [complaintSuccess, setComplaintSuccess] = useState("");
 
-    const [suggestion, setSuggestion] =
-        useState("");
+    const [suggestion, setSuggestion] = useState("");
+    const [studentSuggestions, setStudentSuggestions] = useState([]);
+    const [isSubmittingSuggestion, setIsSubmittingSuggestion] = useState(false);
+    const [suggestionError, setSuggestionError] = useState("");
+    const [suggestionSuccess, setSuggestionSuccess] = useState("");
 
-    const [outpass, setOutpass] =
-        useState("");
-    const [outpassRequests, setOutpassRequests] =
-    useState(() => {
-
-        try {
-
-            const savedRequests =
-                localStorage.getItem(
-                    "edulentra_outpass_requests"
-                );
-
-            return savedRequests
-                ? JSON.parse(savedRequests)
-                : [];
-
-        } catch (error) {
-
-            console.error(
-                "Unable to load outpass requests:",
-                error
-            );
-
-            return [];
-
-        }
-
-    });
+    const [outpassReason, setOutpassReason] = useState("");
+    const [outpassDestination, setOutpassDestination] = useState("");
+    const [outpassFromDate, setOutpassFromDate] = useState("");
+    const [outpassToDate, setOutpassToDate] = useState("");
+    const [outpassRequests, setOutpassRequests] = useState([]);
+    const [isSubmittingOutpass, setIsSubmittingOutpass] = useState(false);
+    const [outpassError, setOutpassError] = useState("");
+    const [outpassSuccess, setOutpassSuccess] = useState("");
 
 
     /* =====================================================
@@ -365,32 +406,11 @@ function StudentDashboard() {
        TASK STATE
     ===================================================== */
 
-    const [tasks, setTasks] =
-        useState(() => {
-
-            try {
-
-                const savedTasks =
-                    localStorage.getItem(
-                        "edulentra_student_tasks"
-                    );
-
-                return savedTasks
-                    ? JSON.parse(savedTasks)
-                    : [];
-
-            } catch (error) {
-
-                console.error(
-                    "Unable to load student tasks:",
-                    error
-                );
-
-                return [];
-
-            }
-
-        });
+    const [tasks, setTasks] = useState([]);
+    const [isLoadingTasks, setIsLoadingTasks] = useState(true);
+    const [taskError, setTaskError] = useState("");
+    const [isSavingTask, setIsSavingTask] = useState(false);
+    const [taskActionId, setTaskActionId] = useState("");
 
 
     /* =====================================================
@@ -418,29 +438,317 @@ function StudentDashboard() {
         useState("");
 
 
-    /* =====================================================
-       SAVE TASKS TO LOCAL STORAGE
-    ===================================================== */
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadTasks = async () => {
+            setIsLoadingTasks(true);
+            setTaskError("");
+            try {
+                const studentTasks = await studentTasksApi.getMine();
+                if (!cancelled) setTasks(studentTasks);
+            } catch (error) {
+                if (!cancelled) {
+                    setTaskError(error.message || "Unable to load your planner tasks.");
+                }
+            } finally {
+                if (!cancelled) setIsLoadingTasks(false);
+            }
+        };
+
+        loadTasks();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     useEffect(() => {
+        let cancelled = false;
+        let requestId = 0;
+        let hasLoaded = false;
 
-        try {
+        const refreshAnnouncements = async () => {
+            const currentRequestId = ++requestId;
+            if (!hasLoaded) setIsLoadingAnnouncements(true);
+            try {
+                const items = await announcementsApi.getAll();
+                if (!cancelled && currentRequestId === requestId) {
+                    setAnnouncements(items);
+                    setAnnouncementError("");
+                }
+            } catch (error) {
+                if (!cancelled && currentRequestId === requestId) {
+                    setAnnouncementError(error.message || "Unable to load announcements.");
+                }
+            } finally {
+                if (!cancelled && currentRequestId === requestId) {
+                    hasLoaded = true;
+                    setIsLoadingAnnouncements(false);
+                }
+            }
+        };
 
-            localStorage.setItem(
-                "edulentra_student_tasks",
-                JSON.stringify(tasks)
-            );
+        const unsubscribe = announcementsApi.subscribeToAnnouncementUpdates(
+            () => refreshAnnouncements(),
+            () => {
+                if (!cancelled) {
+                    setAnnouncementError("Live updates are unavailable. Refresh to check for new announcements.");
+                }
+            }
+        );
+        void refreshAnnouncements();
 
-        } catch (error) {
+        return () => {
+            cancelled = true;
+            unsubscribe();
+        };
+    }, []);
 
-            console.error(
-                "Unable to save student tasks:",
-                error
-            );
+    useEffect(() => {
+        let cancelled = false;
+        studentApi.getProfile()
+            .then((profile) => {
+                if (!cancelled) {
+                    setStudentProfile(profile);
+                    setStudentProfileError("");
+                }
+            })
+            .catch((error) => {
+                if (!cancelled) {
+                    setStudentProfileError(error.message || "Unable to load your profile.");
+                }
+            });
 
-        }
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
-    }, [tasks]);
+    useEffect(() => {
+        let cancelled = false;
+        attendanceApi.getMine()
+            .then((result) => {
+                if (!cancelled) {
+                    setStudentAttendance(result);
+                    setStudentAttendanceError("");
+                }
+            })
+            .catch((error) => {
+                if (!cancelled) {
+                    setStudentAttendanceError(error.message || "Unable to load attendance.");
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setIsLoadingStudentAttendance(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (activeSection !== "complaints") return undefined;
+
+        let cancelled = false;
+        setIsLoadingComplaints(true);
+        complaintsApi.getMine()
+            .then((items) => {
+                if (!cancelled) {
+                    setStudentComplaints(items);
+                    setComplaintError("");
+                }
+            })
+            .catch((error) => {
+                if (!cancelled) {
+                    setComplaintError(error.message || "Unable to load your complaints.");
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setIsLoadingComplaints(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeSection]);
+
+    useEffect(() => {
+        if (activeSection !== "outpass") return undefined;
+
+        let cancelled = false;
+        outpassesApi.getMine()
+            .then((items) => {
+                if (!cancelled) {
+                    setOutpassRequests(items);
+                    setOutpassError("");
+                }
+            })
+            .catch((error) => {
+                if (!cancelled) {
+                    setOutpassError(error.message || "Unable to load your outpass requests.");
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeSection]);
+
+    useEffect(() => {
+        if (activeSection !== "suggestions") return undefined;
+
+        let cancelled = false;
+        suggestionsApi.getMine()
+            .then((items) => {
+                if (!cancelled) {
+                    setStudentSuggestions(items);
+                    setSuggestionError("");
+                }
+            })
+            .catch((error) => {
+                if (!cancelled) {
+                    setSuggestionError(error.message || "Unable to load your suggestions.");
+                }
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeSection]);
+
+    useEffect(() => {
+        if (activeSection !== "assignments") return undefined;
+
+        let cancelled = false;
+        setIsLoadingAssignments(true);
+        assignmentsApi.getMine()
+            .then((items) => {
+                if (!cancelled) {
+                    setStudentAssignments(items);
+                    setAssignmentAnswers(Object.fromEntries(
+                        items.map((item) => [item.id, item.submission?.answer || ""])
+                    ));
+                    setAssignmentError("");
+                }
+            })
+            .catch((error) => {
+                if (!cancelled) {
+                    setAssignmentError(error.message || "Unable to load your assignments.");
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setIsLoadingAssignments(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeSection]);
+
+    useEffect(() => {
+        if (activeSection !== "pdfs") return undefined;
+
+        let cancelled = false;
+        setIsLoadingStudyMaterials(true);
+        studyMaterialsApi.getMine()
+            .then((materials) => {
+                if (!cancelled) {
+                    setStudyMaterials(materials);
+                    setStudyMaterialsError("");
+                }
+            })
+            .catch((error) => {
+                if (!cancelled) {
+                    setStudyMaterialsError(error.message || "Unable to load study materials.");
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setIsLoadingStudyMaterials(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeSection]);
+
+    useEffect(() => {
+        if (activeSection !== "placements") return undefined;
+
+        let cancelled = false;
+        setIsLoadingPlacements(true);
+        placementsApi.getAll()
+            .then((items) => {
+                if (!cancelled) {
+                    setStudentPlacements(items);
+                    setPlacementsError("");
+                }
+            })
+            .catch((error) => {
+                if (!cancelled) {
+                    setPlacementsError(error.message || "Unable to load placement opportunities.");
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setIsLoadingPlacements(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeSection]);
+
+    useEffect(() => {
+        if (activeSection !== "events") return undefined;
+
+        let cancelled = false;
+        setIsLoadingCampusEvents(true);
+        eventsApi.getAll()
+            .then((items) => {
+                if (!cancelled) {
+                    setCampusEvents(items);
+                    setCampusEventsError("");
+                }
+            })
+            .catch((error) => {
+                if (!cancelled) {
+                    setCampusEventsError(error.message || "Unable to load campus events.");
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setIsLoadingCampusEvents(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeSection]);
+
+    useEffect(() => {
+        if (activeSection !== "gallery") return undefined;
+
+        let cancelled = false;
+        setIsLoadingGallery(true);
+        galleryApi.getAll()
+            .then((posts) => {
+                if (!cancelled) {
+                    setGalleryPosts(posts);
+                    setGalleryError("");
+                }
+            })
+            .catch((error) => {
+                if (!cancelled) {
+                    setGalleryError(error.message || "Unable to load gallery posts.");
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setIsLoadingGallery(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeSection]);
 
 
     /* =====================================================
@@ -448,9 +756,21 @@ function StudentDashboard() {
     ===================================================== */
 
     const handleMenuClick = (section) => {
-
+        if (section === activeSection) {
+            return;
+        }
+        sectionHistory.current.push(activeSection);
         setActiveSection(section);
+    };
 
+    const handleSectionBack = () => {
+        if (activeSection !== "dashboard" || sectionHistory.current.length > 0) {
+            const previousSection = sectionHistory.current.pop() || "dashboard";
+            setActiveSection(previousSection);
+            return true;
+        }
+
+        return false;
     };
 
 
@@ -458,26 +778,30 @@ function StudentDashboard() {
        COMPLAINT
     ===================================================== */
 
-    const handleComplaint = (e) => {
-
+    const handleComplaint = async (e) => {
         e.preventDefault();
-
-        if (!complaint.trim()) {
-
-            alert(
-                "Please enter your complaint."
-            );
-
+        if (!complaintSubject.trim() || !complaint.trim()) {
+            setComplaintError("Enter a subject and details for your complaint.");
             return;
-
         }
 
-        alert(
-            "Complaint submitted successfully!"
-        );
-
-        setComplaint("");
-
+        setIsSubmittingComplaint(true);
+        setComplaintError("");
+        setComplaintSuccess("");
+        try {
+            const savedComplaint = await complaintsApi.create({
+                subject: complaintSubject.trim(),
+                description: complaint.trim(),
+            });
+            setComplaintSubject("");
+            setComplaint("");
+            setComplaintSuccess("Your complaint has been submitted.");
+            setStudentComplaints((items) => [savedComplaint, ...items]);
+        } catch (error) {
+            setComplaintError(error.message || "Unable to submit your complaint.");
+        } finally {
+            setIsSubmittingComplaint(false);
+        }
     };
 
 
@@ -485,26 +809,26 @@ function StudentDashboard() {
        SUGGESTION
     ===================================================== */
 
-    const handleSuggestion = (e) => {
-
+    const handleSuggestion = async (e) => {
         e.preventDefault();
-
-        if (!suggestion.trim()) {
-
-            alert(
-                "Please enter your suggestion."
-            );
-
+        if (suggestion.trim().length < 5) {
+            setSuggestionError("Enter a suggestion with at least 5 characters.");
             return;
-
         }
 
-        alert(
-            "Suggestion submitted successfully!"
-        );
-
-        setSuggestion("");
-
+        setIsSubmittingSuggestion(true);
+        setSuggestionError("");
+        setSuggestionSuccess("");
+        try {
+            const savedSuggestion = await suggestionsApi.create(suggestion.trim());
+            setStudentSuggestions((items) => [savedSuggestion, ...items]);
+            setSuggestion("");
+            setSuggestionSuccess("Your suggestion has been submitted.");
+        } catch (error) {
+            setSuggestionError(error.message || "Unable to submit your suggestion.");
+        } finally {
+            setIsSubmittingSuggestion(false);
+        }
     };
 
 
@@ -512,26 +836,78 @@ function StudentDashboard() {
        OUTPASS
     ===================================================== */
 
-    const handleOutpass = (e) => {
+    const handleOutpass = async (e) => {
 
         e.preventDefault();
 
-        if (!outpass.trim()) {
-
-            alert(
-                "Please enter the reason for outpass."
-            );
-
+        if (!outpassReason.trim() || !outpassDestination.trim()) {
+            setOutpassError("Enter a reason and destination for the outpass request.");
             return;
-
         }
 
-        alert(
-            "Outpass request submitted successfully!"
-        );
+        if (!outpassFromDate || !outpassToDate) {
+            setOutpassError("Select both the from and to dates.");
+            return;
+        }
 
-        setOutpass("");
+        const from = new Date(outpassFromDate);
+        const to = new Date(outpassToDate);
+        if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
+            setOutpassError("The outpass date range is invalid.");
+            return;
+        }
 
+        setIsSubmittingOutpass(true);
+        setOutpassError("");
+        setOutpassSuccess("");
+
+        try {
+            const created = await outpassesApi.create({
+                reason: outpassReason.trim(),
+                destination: outpassDestination.trim(),
+                fromDate: outpassFromDate,
+                toDate: outpassToDate,
+            });
+
+            setOutpassReason("");
+            setOutpassDestination("");
+            setOutpassFromDate("");
+            setOutpassToDate("");
+            setOutpassSuccess("Your outpass request has been submitted.");
+            setOutpassRequests((items) => [created, ...items]);
+        } catch (error) {
+            setOutpassError(error.message || "Unable to submit your outpass request.");
+        } finally {
+            setIsSubmittingOutpass(false);
+        }
+
+    };
+
+    const handleAssignmentSubmit = async (event, assignmentId) => {
+        event.preventDefault();
+        const answer = assignmentAnswers[assignmentId]?.trim() || "";
+        const fileUrl = assignmentAttachmentUrls[assignmentId]?.trim() || "";
+        if (!answer) {
+            setAssignmentError("Write your response before submitting.");
+            return;
+        }
+
+        setSubmittingAssignmentId(assignmentId);
+        setAssignmentError("");
+        setAssignmentSuccess("");
+        try {
+            const result = await assignmentsApi.submit(assignmentId, answer, fileUrl);
+            setStudentAssignments((items) => items.map((item) =>
+                item.id === assignmentId
+                    ? { ...item, submission: result.submission }
+                    : item
+            ));
+            setAssignmentSuccess("Your assignment response has been submitted.");
+        } catch (error) {
+            setAssignmentError(error.message || "Unable to submit your assignment.");
+        } finally {
+            setSubmittingAssignmentId("");
+        }
     };
 
 
@@ -690,7 +1066,7 @@ function StudentDashboard() {
     };
 
 
-const handleAddTask = (e) => {
+const handleAddTask = async (e) => {
 
     e.preventDefault();
 
@@ -736,43 +1112,24 @@ const handleAddTask = (e) => {
     
 
 
-        const newTask = {
+        setIsSavingTask(true);
+        setTaskError("");
+        let newTask;
+        try {
+            newTask = await studentTasksApi.create({
+                title: taskTitle.trim(),
+                category: taskCategory,
+                date: taskDate,
+                time: taskTime,
+                description: taskDescription.trim(),
+            });
+        } catch (error) {
+            setTaskError(error.message || "Unable to create this planner task.");
+            setIsSavingTask(false);
+            return;
+        }
 
-            id:
-                `${Date.now()}-${Math.random()
-                    .toString(36)
-                    .substring(2, 9)}`,
-
-            title:
-                taskTitle.trim(),
-
-            category:
-                taskCategory,
-
-            date:
-                taskDate,
-
-            time:
-                taskTime,
-
-            description:
-                taskDescription.trim(),
-
-            completed:
-                false,
-
-            createdAt:
-                new Date().toISOString()
-
-        };
-
-
-        setTasks(
-            (previousTasks) => [
-                ...previousTasks,
-                newTask
-            ]
-        );
+        setTasks((previousTasks) => [...previousTasks, newTask]);
 
 
         setSelectedDate(
@@ -796,6 +1153,7 @@ const handleAddTask = (e) => {
 
 
         setShowTaskModal(false);
+        setIsSavingTask(false);
 
     };
 
@@ -804,22 +1162,24 @@ const handleAddTask = (e) => {
        COMPLETE TASK
     ===================================================== */
 
-    const toggleTask = (taskId) => {
-
-        setTasks(
-            (previousTasks) =>
-                previousTasks.map(
-                    (task) =>
-                        task.id === taskId
-                            ? {
-                                ...task,
-                                completed:
-                                    !task.completed
-                            }
-                            : task
-                )
-        );
-
+    const toggleTask = async (taskId) => {
+        const task = tasks.find((item) => item.id === taskId);
+        if (!task) return;
+        setTaskActionId(taskId);
+        setTaskError("");
+        try {
+            const updatedTask = await studentTasksApi.setCompletion(
+                taskId,
+                !task.completed
+            );
+            setTasks((previousTasks) =>
+                previousTasks.map((item) => item.id === taskId ? updatedTask : item)
+            );
+        } catch (error) {
+            setTaskError(error.message || "Unable to update this planner task.");
+        } finally {
+            setTaskActionId("");
+        }
     };
 
 
@@ -827,7 +1187,7 @@ const handleAddTask = (e) => {
        DELETE TASK
     ===================================================== */
 
-    const deleteTask = (taskId) => {
+    const deleteTask = async (taskId) => {
 
         const shouldDelete =
             window.confirm(
@@ -840,13 +1200,18 @@ const handleAddTask = (e) => {
 
         }
 
-        setTasks(
-            (previousTasks) =>
-                previousTasks.filter(
-                    (task) =>
-                        task.id !== taskId
-                )
-        );
+        setTaskActionId(taskId);
+        setTaskError("");
+        try {
+            await studentTasksApi.remove(taskId);
+            setTasks((previousTasks) =>
+                previousTasks.filter((task) => task.id !== taskId)
+            );
+        } catch (error) {
+            setTaskError(error.message || "Unable to delete this planner task.");
+        } finally {
+            setTaskActionId("");
+        }
 
     };
 
@@ -906,11 +1271,11 @@ const handleAddTask = (e) => {
     <div className="sidebar-profile-info">
 
         <h3>
-            Sai Student
+            {studentProfile?.name || studentProfile?.username || "Student"}
         </h3>
 
         <p>
-            Student ID: EDU2026CSE001
+            Roll No: {studentProfile?.rollNumber || studentProfile?.username || "—"}
         </p>
 
    
@@ -925,15 +1290,13 @@ const handleAddTask = (e) => {
 
 
 
-                    {/* HOME */}
-
                     <button
                         className="nav-item"
-                        onClick={() => navigate("/")}
+                        onClick={handleLogout}
                     >
-                        🏡
+                        ↪
                         <span>
-                            Home
+                            Log Out
                         </span>
                     </button>
 
@@ -983,6 +1346,13 @@ const handleAddTask = (e) => {
                             Notes
                         </span>
 
+                    </button>
+                    <button
+                        className={activeSection === "assignments" ? "nav-item active" : "nav-item"}
+                        onClick={() => handleMenuClick("assignments")}
+                    >
+                        📝
+                        <span>Assignments</span>
                     </button>
                     {/*Attendence*/}
                     <button
@@ -1067,6 +1437,22 @@ const handleAddTask = (e) => {
                             Announcements
                         </span>
 
+                    </button>
+
+                    <button
+                        className={activeSection === "events" ? "nav-item active" : "nav-item"}
+                        onClick={() => handleMenuClick("events")}
+                    >
+                        🎟️
+                        <span>Campus Events</span>
+                    </button>
+
+                    <button
+                        className={activeSection === "gallery" ? "nav-item active" : "nav-item"}
+                        onClick={() => handleMenuClick("gallery")}
+                    >
+                        🏆
+                        <span>Achievements & Gallery</span>
                     </button>
 
 
@@ -1169,6 +1555,11 @@ const handleAddTask = (e) => {
             ================================================= */}
 
             <main className="student-main">
+                <PortalBackButton
+                    role="student"
+                    fallbackTo="/student"
+                    onBack={handleSectionBack}
+                />
 
 
                 {/* =================================================
@@ -1180,28 +1571,31 @@ const handleAddTask = (e) => {
                     <div className="student-info">
 
                         <h1>
-                            Hello, Student 👋
+                            Hello, {studentProfile?.name || studentProfile?.username || "Student"} 👋
                         </h1>
 
                         <p>
-                            Roll No: 23CS056
-                            &nbsp; | &nbsp;
-                            Computer Science Engineering
+                            Roll No: {studentProfile?.rollNumber || studentProfile?.username || "—"}
+                            {studentProfile?.branch ? ` | ${studentProfile.branch}` : ""}
                         </p>
 
                     </div>
 
 
+                    <div className="student-header-actions">
+
                     <div className="attendance-card">
 
                         <div className="attendance-circle">
-                            85%
+                            {studentAttendance?.summary.percentage == null
+                                ? "—"
+                                : `${studentAttendance.summary.percentage}%`}
                         </div>
 
                         <div className="attendance-details">
 
                             <h4>
-                                Today's Attendance
+                                Overall Attendance
                             </h4>
 
                             <p>
@@ -1210,7 +1604,7 @@ const handleAddTask = (e) => {
                                 </span>
 
                                 <b>
-                                    10
+                                    {studentAttendance?.summary.present ?? "—"}
                                 </b>
                             </p>
 
@@ -1220,7 +1614,7 @@ const handleAddTask = (e) => {
                                 </span>
 
                                 <b>
-                                    1
+                                    {studentAttendance?.summary.absent ?? "—"}
                                 </b>
                             </p>
 
@@ -1230,7 +1624,7 @@ const handleAddTask = (e) => {
                                 </span>
 
                                 <b>
-                                    11
+                                    {studentAttendance?.summary.total ?? "—"}
                                 </b>
                             </p>
 
@@ -1246,6 +1640,17 @@ const handleAddTask = (e) => {
                             </button>
 
                         </div>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        className="student-home-button"
+                        onClick={() => navigate("/")}
+                        aria-label="College Home"
+                    >
+                        🏠 <span>College Home</span>
+                    </button>
 
                     </div>
 
@@ -1685,6 +2090,11 @@ const handleAddTask = (e) => {
 
                                     </div>
 
+                                    {taskError && (
+                                        <p className="task-error" role="alert">
+                                            {taskError}
+                                        </p>
+                                    )}
 
                                     {/* TASK SUMMARY */}
 
@@ -1724,7 +2134,9 @@ const handleAddTask = (e) => {
 
                                     <div className="task-list">
 
-                                        {selectedDateTasks.length === 0 ? (
+                                        {isLoadingTasks ? (
+                                            <p role="status">Loading your planner tasks...</p>
+                                        ) : selectedDateTasks.length === 0 ? (
 
                                             <div className="empty-tasks">
 
@@ -1769,6 +2181,7 @@ const handleAddTask = (e) => {
                                                                     task.id
                                                                 )
                                                             }
+                                                            disabled={taskActionId === task.id}
                                                             aria-label={
                                                                 task.completed
                                                                     ? "Mark task incomplete"
@@ -1837,6 +2250,7 @@ const handleAddTask = (e) => {
                                                                     task.id
                                                                 )
                                                             }
+                                                            disabled={taskActionId === task.id}
                                                             aria-label="Delete task"
                                                         >
                                                             🗑
@@ -1874,7 +2288,7 @@ const handleAddTask = (e) => {
                             <div>
                                 📢
                                 <span>
-                                    3 New Announcements
+                                    {announcements.length} Announcements
                                 </span>
                             </div>
 
@@ -1937,7 +2351,9 @@ const handleAddTask = (e) => {
                                 </span>
 
                                 <strong>
-                                    85%
+                                    {studentAttendance?.summary.percentage == null
+                                        ? "—"
+                                        : `${studentAttendance.summary.percentage}%`}
                                 </strong>
 
                             </div>
@@ -1950,7 +2366,7 @@ const handleAddTask = (e) => {
                                 </span>
 
                                 <strong>
-                                    102
+                                    {studentAttendance?.summary.present ?? "—"}
                                 </strong>
 
                             </div>
@@ -1963,7 +2379,7 @@ const handleAddTask = (e) => {
                                 </span>
 
                                 <strong>
-                                    18
+                                    {studentAttendance?.summary.absent ?? "—"}
                                 </strong>
 
                             </div>
@@ -1976,7 +2392,7 @@ const handleAddTask = (e) => {
                                 </span>
 
                                 <strong>
-                                    120
+                                    {studentAttendance?.summary.total ?? "—"}
                                 </strong>
 
                             </div>
@@ -2010,55 +2426,25 @@ const handleAddTask = (e) => {
 
                                     <tbody>
 
-                                        <tr>
-                                            <td>SSP</td>
-                                            <td>20</td>
-                                            <td>3</td>
-                                            <td>23</td>
-                                            <td className="attendance-good">
-                                                87%
-                                            </td>
-                                        </tr>
-
-                                        <tr>
-                                            <td>NLP</td>
-                                            <td>18</td>
-                                            <td>2</td>
-                                            <td>20</td>
-                                            <td className="attendance-good">
-                                                90%
-                                            </td>
-                                        </tr>
-
-                                        <tr>
-                                            <td>IQTA</td>
-                                            <td>19</td>
-                                            <td>4</td>
-                                            <td>23</td>
-                                            <td className="attendance-good">
-                                                83%
-                                            </td>
-                                        </tr>
-
-                                        <tr>
-                                            <td>CV & IP</td>
-                                            <td>21</td>
-                                            <td>4</td>
-                                            <td>25</td>
-                                            <td className="attendance-good">
-                                                84%
-                                            </td>
-                                        </tr>
-
-                                        <tr>
-                                            <td>DV</td>
-                                            <td>24</td>
-                                            <td>5</td>
-                                            <td>29</td>
-                                            <td className="attendance-good">
-                                                83%
-                                            </td>
-                                        </tr>
+                                        {isLoadingStudentAttendance ? (
+                                            <tr><td colSpan="5">Loading attendance...</td></tr>
+                                        ) : studentAttendanceError ? (
+                                            <tr><td colSpan="5" role="alert">{studentAttendanceError}</td></tr>
+                                        ) : studentAttendance?.subjects.length ? (
+                                            studentAttendance.subjects.map((subject) => (
+                                                <tr key={subject.subject}>
+                                                    <td>{subject.subject}</td>
+                                                    <td>{subject.present}</td>
+                                                    <td>{subject.absent}</td>
+                                                    <td>{subject.total}</td>
+                                                    <td className={subject.percentage >= 75 ? "attendance-good" : "attendance-low"}>
+                                                        {subject.percentage}%
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr><td colSpan="5">No attendance records have been submitted yet.</td></tr>
+                                        )}
 
                                     </tbody>
 
@@ -2074,7 +2460,7 @@ const handleAddTask = (e) => {
                         <div className="attendance-block">
 
                             <h3>
-                                September 2026 Attendance
+                                Attendance records
                             </h3>
 
                             <div className="attendance-table-wrapper">
@@ -2085,10 +2471,8 @@ const handleAddTask = (e) => {
 
                                         <tr>
                                             <th>Date</th>
-                                            <th>Day</th>
-                                            <th>Classes</th>
-                                            <th>Present</th>
-                                            <th>Absent</th>
+                                            <th>Subject</th>
+                                            <th>Period</th>
                                             <th>Status</th>
                                         </tr>
 
@@ -2096,60 +2480,24 @@ const handleAddTask = (e) => {
 
                                     <tbody>
 
-                                        <tr>
-                                            <td>01 Sep 2026</td>
-                                            <td>Tuesday</td>
-                                            <td>5</td>
-                                            <td>5</td>
-                                            <td>0</td>
-                                            <td className="status-present">
-                                                Present
-                                            </td>
-                                        </tr>
-
-                                        <tr>
-                                            <td>02 Sep 2026</td>
-                                            <td>Wednesday</td>
-                                            <td>5</td>
-                                            <td>4</td>
-                                            <td>1</td>
-                                            <td className="status-present">
-                                                Present
-                                            </td>
-                                        </tr>
-
-                                        <tr>
-                                            <td>03 Sep 2026</td>
-                                            <td>Thursday</td>
-                                            <td>5</td>
-                                            <td>5</td>
-                                            <td>0</td>
-                                            <td className="status-present">
-                                                Present
-                                            </td>
-                                        </tr>
-
-                                        <tr>
-                                            <td>04 Sep 2026</td>
-                                            <td>Friday</td>
-                                            <td>5</td>
-                                            <td>3</td>
-                                            <td>2</td>
-                                            <td className="status-absent">
-                                                Low Attendance
-                                            </td>
-                                        </tr>
-
-                                        <tr>
-                                            <td>05 Sep 2026</td>
-                                            <td>Saturday</td>
-                                            <td>4</td>
-                                            <td>4</td>
-                                            <td>0</td>
-                                            <td className="status-present">
-                                                Present
-                                            </td>
-                                        </tr>
+                                        {isLoadingStudentAttendance ? (
+                                            <tr><td colSpan="4">Loading attendance...</td></tr>
+                                        ) : studentAttendanceError ? (
+                                            <tr><td colSpan="4" role="alert">{studentAttendanceError}</td></tr>
+                                        ) : studentAttendance?.records.length ? (
+                                            studentAttendance.records.map((record, index) => (
+                                                <tr key={`${record.date}-${record.subject}-${record.period}-${index}`}>
+                                                    <td>{new Date(record.date).toLocaleDateString()}</td>
+                                                    <td>{record.subject}</td>
+                                                    <td>{record.period}</td>
+                                                    <td className={record.status === "ABSENT" ? "status-absent" : "status-present"}>
+                                                        {record.status}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr><td colSpan="4">No attendance records have been submitted yet.</td></tr>
+                                        )}
 
                                     </tbody>
 
@@ -2181,63 +2529,132 @@ const handleAddTask = (e) => {
                             uploaded by faculty.
                         </p>
 
-                        <div className="document-list">
-
-                            <div className="document">
-
-                                <span>
-                                    📄 DBMS Unit 1 Notes.pdf
-                                </span>
-
-                                <button>
-                                    View
-                                </button>
-
+                        {studyMaterialsError && <p role="alert">{studyMaterialsError}</p>}
+                        {isLoadingStudyMaterials ? (
+                            <p>Loading study materials...</p>
+                        ) : studyMaterials.length === 0 ? (
+                            <p>No study materials have been published for your section yet.</p>
+                        ) : (
+                            <div className="document-list">
+                                {studyMaterials.map((material) => (
+                                    <div className="document" key={material.id || material._id}>
+                                        <div>
+                                            <strong>{material.title}</strong>
+                                            <p>
+                                                {material.subject} · {material.unit} ·
+                                                {" "}{material.section === "*" ? "All sections" : material.section === "__unassigned__" ? "Unassigned section" : `Section ${material.section}`}
+                                            </p>
+                                            {material.description && <p>{material.description}</p>}
+                                            <small>
+                                                {material.fileName}
+                                                {material.uploadedDate ? ` · Published ${material.uploadedDate}` : ""}
+                                            </small>
+                                        </div>
+                                        <a href={material.fileUrl} target="_blank" rel="noreferrer">
+                                            View / Download
+                                        </a>
+                                    </div>
+                                ))}
                             </div>
-
-
-                            <div className="document">
-
-                                <span>
-                                    📄 Artificial Intelligence Notes.pdf
-                                </span>
-
-                                <button>
-                                    View
-                                </button>
-
-                            </div>
-
-
-                            <div className="document">
-
-                                <span>
-                                    📄 Java Programming.pdf
-                                </span>
-
-                                <button>
-                                    View
-                                </button>
-
-                            </div>
-
-
-                            <div className="document">
-
-                                <span>
-                                    📄 Operating Systems.pdf
-                                </span>
-
-                                <button>
-                                    View
-                                </button>
-
-                            </div>
-
-                        </div>
+                        )}
 
                     </section>
 
+                )}
+
+
+                {activeSection === "assignments" && (
+                    <section className="module-section">
+                        <h2>📝 Assignments</h2>
+                        <p>View coursework assigned to your branch and section, submit your response, and review faculty feedback.</p>
+                        {assignmentError && <p role="alert">{assignmentError}</p>}
+                        {assignmentSuccess && <p role="status">{assignmentSuccess}</p>}
+                        {isLoadingAssignments ? (
+                            <p>Loading your assignments...</p>
+                        ) : studentAssignments.length === 0 ? (
+                            <p>No assignments have been published for your section yet.</p>
+                        ) : (
+                            <div style={{ display: "grid", gap: "18px", maxWidth: "850px" }}>
+                                {studentAssignments.map((assignment) => {
+                                    const submission = assignment.submission;
+                                    const isGraded = Boolean(submission?.gradedAt);
+                                    return (
+                                        <article key={assignment.id} className="attendance-block">
+                                            <h3>{assignment.title}</h3>
+                                            <p>
+                                                {assignment.subject} · Due {new Date(assignment.dueDate).toLocaleDateString()} ·
+                                                {" "}{assignment.maxMarks} marks · {assignment.status}
+                                            </p>
+                                            {assignment.description && <p style={{ whiteSpace: "pre-wrap" }}>{assignment.description}</p>}
+                                            {submission && (
+                                                <div>
+                                                    <p>
+                                                        Submitted {new Date(submission.submittedAt).toLocaleString()}
+                                                        {submission.isLate ? " (late)" : ""}
+                                                    </p>
+                                                    {submission.fileUrl && (
+                                                        <p>
+                                                            Attachment:{" "}
+                                                            <a href={submission.fileUrl} target="_blank" rel="noreferrer">
+                                                                Open submitted attachment
+                                                            </a>
+                                                        </p>
+                                                    )}
+                                                    {isGraded && (
+                                                        <p role="status">
+                                                            Grade: {submission.marks}/{assignment.maxMarks}
+                                                            {submission.feedback ? ` · Feedback: ${submission.feedback}` : ""}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+                                            {isGraded ? (
+                                                <p>This submission has been graded and can no longer be changed.</p>
+                                            ) : (
+                                                <form
+                                                    className="student-module-form"
+                                                    onSubmit={(event) => handleAssignmentSubmit(event, assignment.id)}
+                                                >
+                                                    <label htmlFor={`assignment-answer-${assignment.id}`}>
+                                                        Your response
+                                                    </label>
+                                                    <textarea
+                                                        id={`assignment-answer-${assignment.id}`}
+                                                        value={assignmentAnswers[assignment.id] || ""}
+                                                        onChange={(event) => setAssignmentAnswers((answers) => ({
+                                                            ...answers,
+                                                            [assignment.id]: event.target.value,
+                                                        }))}
+                                                        maxLength={10000}
+                                                        required
+                                                    />
+                                                    <label htmlFor={`assignment-attachment-${assignment.id}`}>
+                                                        Attachment URL (optional)
+                                                    </label>
+                                                    <input
+                                                        id={`assignment-attachment-${assignment.id}`}
+                                                        type="url"
+                                                        placeholder="https://..."
+                                                        maxLength={2048}
+                                                        value={assignmentAttachmentUrls[assignment.id] || ""}
+                                                        onChange={(event) => setAssignmentAttachmentUrls((urls) => ({
+                                                            ...urls,
+                                                            [assignment.id]: event.target.value,
+                                                        }))}
+                                                    />
+                                                    <button type="submit" disabled={submittingAssignmentId === assignment.id}>
+                                                        {submittingAssignmentId === assignment.id
+                                                            ? "Submitting..."
+                                                            : submission ? "Update submission" : "Submit assignment"}
+                                                    </button>
+                                                </form>
+                                            )}
+                                        </article>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </section>
                 )}
 
 
@@ -2255,8 +2672,11 @@ const handleAddTask = (e) => {
 
                         <p>
                             Submit your complaint to
-                            the college administration.
+                            your department. You can track its status below.
                         </p>
+
+                        {complaintError && <p role="alert">{complaintError}</p>}
+                        {complaintSuccess && <p role="status">{complaintSuccess}</p>}
 
                         <form
                             className="student-module-form"
@@ -2265,7 +2685,17 @@ const handleAddTask = (e) => {
                             }
                         >
 
+                            <label htmlFor="student-complaint-subject">Subject</label>
+                            <input
+                                id="student-complaint-subject"
+                                value={complaintSubject}
+                                onChange={(e) => setComplaintSubject(e.target.value)}
+                                maxLength={120}
+                                required
+                            />
+                            <label htmlFor="student-complaint-details">Complaint details</label>
                             <textarea
+                                id="student-complaint-details"
                                 placeholder="Write your complaint here..."
                                 value={complaint}
                                 onChange={(e) =>
@@ -2273,13 +2703,33 @@ const handleAddTask = (e) => {
                                         e.target.value
                                     )
                                 }
+                                maxLength={3000}
+                                required
                             />
 
-                            <button type="submit">
-                                Submit Complaint
+                            <button type="submit" disabled={isSubmittingComplaint}>
+                                {isSubmittingComplaint ? "Submitting..." : "Submit Complaint"}
                             </button>
 
                         </form>
+
+                        <div className="student-complaint-history" aria-live="polite">
+                            <h3>Your complaints</h3>
+                            {isLoadingComplaints ? (
+                                <p>Loading your complaints...</p>
+                            ) : studentComplaints.length ? (
+                                studentComplaints.map((item) => (
+                                    <article key={item._id}>
+                                        <h4>{item.subject}</h4>
+                                        <p>{item.description}</p>
+                                        <p>Status: {item.status.replaceAll("_", " ")}</p>
+                                        {item.response && <p>Department response: {item.response}</p>}
+                                    </article>
+                                ))
+                            ) : (
+                                <p>You have not submitted any complaints yet.</p>
+                            )}
+                        </div>
 
                     </section>
 
@@ -2299,9 +2749,11 @@ const handleAddTask = (e) => {
                         </h2>
 
                         <p>
-                            Request permission to leave
-                            the campus.
+                            Request permission to leave the campus.
                         </p>
+
+                        {outpassError && <p role="alert">{outpassError}</p>}
+                        {outpassSuccess && <p role="status">{outpassSuccess}</p>}
 
                         <form
                             className="student-module-form"
@@ -2312,19 +2764,74 @@ const handleAddTask = (e) => {
 
                             <textarea
                                 placeholder="Enter reason for outpass..."
-                                value={outpass}
+                                value={outpassReason}
                                 onChange={(e) =>
-                                    setOutpass(
+                                    setOutpassReason(
                                         e.target.value
                                     )
                                 }
                             />
 
-                            <button type="submit">
-                                Submit Outpass Request
+                            <input
+                                type="text"
+                                placeholder="Destination"
+                                value={outpassDestination}
+                                onChange={(e) =>
+                                    setOutpassDestination(
+                                        e.target.value
+                                    )
+                                }
+                            />
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                                <input
+                                    type="date"
+                                    value={outpassFromDate}
+                                    onChange={(e) => setOutpassFromDate(e.target.value)}
+                                />
+                                <input
+                                    type="date"
+                                    value={outpassToDate}
+                                    onChange={(e) => setOutpassToDate(e.target.value)}
+                                />
+                            </div>
+
+                            <button type="submit" disabled={isSubmittingOutpass}>
+                                {isSubmittingOutpass ? "Submitting..." : "Submit Outpass Request"}
                             </button>
 
                         </form>
+
+                        <div style={{ marginTop: "18px", display: "grid", gap: "12px" }}>
+                            {outpassRequests.length === 0 ? (
+                                <div className="empty-tasks">
+                                    <p>No outpass requests yet.</p>
+                                </div>
+                            ) : (
+                                outpassRequests.map((request) => (
+                                    <div key={request._id || request.id} className="task-item">
+                                        <div className="task-content">
+                                            <div className="task-title-row">
+                                                <h4>{request.destination}</h4>
+                                                <span className={`task-category ${String(request.status || "pending").toLowerCase()}`}>
+                                                    {String(request.status || "PENDING").replace(/^./, (char) => char.toUpperCase())}
+                                                </span>
+                                            </div>
+                                            <p>{request.reason}</p>
+                                            <small>
+                                                {request.fromDate ? new Date(request.fromDate).toLocaleDateString() : ""} → {request.toDate ? new Date(request.toDate).toLocaleDateString() : ""}
+                                            </small>
+                                            {(request.reviewRemarks || request.rejectionReason) && (
+                                                <p>
+                                                    <strong>Review note:</strong>{" "}
+                                                    {request.reviewRemarks || request.rejectionReason}
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
 
                     </section>
 
@@ -2343,53 +2850,94 @@ const handleAddTask = (e) => {
                             📢 Announcements
                         </h2>
 
+                        {announcementError && (
+                            <p role="alert">{announcementError}</p>
+                        )}
+
                         <div className="announcement-list">
-
-                            <div>
-
-                                <b>
-                                    📌 Internal Exams
-                                </b>
-
-                                <p>
-                                    Internal examinations
-                                    will begin next week.
-                                </p>
-
-                            </div>
-
-
-                            <div>
-
-                                <b>
-                                    📌 Hackathon
-                                </b>
-
-                                <p>
-                                    Registration for the
-                                    upcoming hackathon is open.
-                                </p>
-
-                            </div>
-
-
-                            <div>
-
-                                <b>
-                                    📌 Placement Drive
-                                </b>
-
-                                <p>
-                                    New placement opportunities
-                                    are available.
-                                </p>
-
-                            </div>
-
+                            {isLoadingAnnouncements ? (
+                                <p>Loading announcements...</p>
+                            ) : announcements.length ? (
+                                announcements.map((announcement) => (
+                                    <article key={announcement.id}>
+                                        <b>📌 {announcement.title}</b>
+                                        <p>{announcement.message}</p>
+                                        <small>
+                                            {announcement.category} · {announcement.priority} priority · {announcement.date}
+                                            {announcement.createdByName
+                                                ? ` · By ${announcement.createdByName}`
+                                                : ""}
+                                        </small>
+                                    </article>
+                                ))
+                            ) : (
+                                <p>No announcements have been published for you yet.</p>
+                            )}
                         </div>
 
                     </section>
 
+                )}
+
+                {activeSection === "events" && (
+                    <section className="module-section">
+                        <h2>🎟️ Campus Events</h2>
+                        <p>Upcoming events published by your college.</p>
+                        {campusEventsError && <p role="alert">{campusEventsError}</p>}
+                        {isLoadingCampusEvents ? (
+                            <p>Loading campus events...</p>
+                        ) : campusEvents.length === 0 ? (
+                            <p>No upcoming campus events have been published.</p>
+                        ) : (
+                            <div style={{ display: "grid", gap: "16px", maxWidth: "850px" }}>
+                                {campusEvents.map((event) => (
+                                    <article className="attendance-block" key={event.id}>
+                                        <h3>{event.title}</h3>
+                                        <p>
+                                            {event.category} · {new Date(`${event.date}T00:00:00`).toLocaleDateString()}
+                                            {event.location ? ` · ${event.location}` : ""}
+                                        </p>
+                                        {event.description && (
+                                            <p style={{ whiteSpace: "pre-wrap" }}>{event.description}</p>
+                                        )}
+                                    </article>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+                )}
+
+                {activeSection === "gallery" && (
+                    <section className="module-section">
+                        <h2>🏆 Achievements & Gallery</h2>
+                        <p>Campus achievements, celebrations, and highlights.</p>
+                        {galleryError && <p role="alert">{galleryError}</p>}
+                        {isLoadingGallery ? (
+                            <p>Loading gallery posts...</p>
+                        ) : galleryPosts.length === 0 ? (
+                            <p>No achievements or gallery posts have been published yet.</p>
+                        ) : (
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
+                                {galleryPosts.map((post) => (
+                                    <article className="attendance-block" key={post.id}>
+                                        {post.imageUrl && (
+                                            <img
+                                                src={post.imageUrl}
+                                                alt={post.title}
+                                                loading="lazy"
+                                                style={{ width: "100%", maxHeight: "260px", objectFit: "cover", borderRadius: "10px", marginBottom: "12px" }}
+                                            />
+                                        )}
+                                        <p>
+                                            {post.category} · {new Date(`${post.date}T00:00:00`).toLocaleDateString()}
+                                        </p>
+                                        <h3>{post.title}</h3>
+                                        <p style={{ whiteSpace: "pre-wrap" }}>{post.description}</p>
+                                    </article>
+                                ))}
+                            </div>
+                        )}
+                    </section>
                 )}
 
 
@@ -2410,6 +2958,9 @@ const handleAddTask = (e) => {
                             by sharing your ideas.
                         </p>
 
+                        {suggestionError && <p role="alert">{suggestionError}</p>}
+                        {suggestionSuccess && <p role="status">{suggestionSuccess}</p>}
+
                         <form
                             className="student-module-form"
                             onSubmit={
@@ -2420,6 +2971,7 @@ const handleAddTask = (e) => {
                             <textarea
                                 placeholder="Enter your suggestion..."
                                 value={suggestion}
+                                maxLength={3000}
                                 onChange={(e) =>
                                     setSuggestion(
                                         e.target.value
@@ -2427,11 +2979,35 @@ const handleAddTask = (e) => {
                                 }
                             />
 
-                            <button type="submit">
-                                Submit Suggestion
+                            <button type="submit" disabled={isSubmittingSuggestion}>
+                                {isSubmittingSuggestion ? "Submitting..." : "Submit Suggestion"}
                             </button>
 
                         </form>
+
+                        <div style={{ marginTop: "18px", display: "grid", gap: "12px" }}>
+                            {studentSuggestions.length === 0 ? (
+                                <p>No suggestions submitted yet.</p>
+                            ) : (
+                                studentSuggestions.map((item) => (
+                                    <article key={item._id} className="task-item">
+                                        <div className="task-content">
+                                            <div className="task-title-row">
+                                                <h4>Suggestion</h4>
+                                                <span className={`task-category ${String(item.status || "SUBMITTED").toLowerCase().replaceAll("_", "-")}`}>
+                                                    {String(item.status || "SUBMITTED").replaceAll("_", " ")}
+                                                </span>
+                                            </div>
+                                            <p>{item.message}</p>
+                                            {item.response && (
+                                                <p><strong>Department response:</strong> {item.response}</p>
+                                            )}
+                                            <small>{new Date(item.createdAt).toLocaleDateString()}</small>
+                                        </div>
+                                    </article>
+                                ))
+                            )}
+                        </div>
 
                     </section>
 
@@ -2450,71 +3026,32 @@ const handleAddTask = (e) => {
                             💼 Placements
                         </h2>
 
-                        <div className="placement-list">
-
-                            <div>
-
-                                <h3>
-                                    TCS
-                                </h3>
-
-                                <p>
-                                    Eligibility: 7 CGPA+
-                                </p>
-
-                                <p>
-                                    Package: 6 LPA
-                                </p>
-
-                                <button>
-                                    View Details
-                                </button>
-
+                        {placementsError && <p role="alert">{placementsError}</p>}
+                        {isLoadingPlacements ? (
+                            <p>Loading placement opportunities...</p>
+                        ) : studentPlacements.length === 0 ? (
+                            <p>No open placement opportunities are available for your branch.</p>
+                        ) : (
+                            <div className="placement-list">
+                                {studentPlacements.map((placement) => (
+                                    <article key={placement.id}>
+                                        <h3>{placement.company}</h3>
+                                        <p>{placement.role} · {placement.location}</p>
+                                        {placement.eligibility && <p>Eligibility: {placement.eligibility}</p>}
+                                        {placement.package && <p>Package: {placement.package}</p>}
+                                        <p>{placement.description}</p>
+                                        <p>Apply by {new Date(`${placement.deadline}T00:00:00`).toLocaleDateString()}</p>
+                                        {placement.applyLink ? (
+                                            <a href={placement.applyLink} target="_blank" rel="noreferrer">
+                                                Apply / View Details
+                                            </a>
+                                        ) : (
+                                            <span>Contact placement cell for application details.</span>
+                                        )}
+                                    </article>
+                                ))}
                             </div>
-
-
-                            <div>
-
-                                <h3>
-                                    Infosys
-                                </h3>
-
-                                <p>
-                                    Eligibility: 60%+
-                                </p>
-
-                                <p>
-                                    Package: 5 LPA
-                                </p>
-
-                                <button>
-                                    View Details
-                                </button>
-
-                            </div>
-
-
-                            <div>
-
-                                <h3>
-                                    Accenture
-                                </h3>
-
-                                <p>
-                                    Eligibility: 6.5 CGPA+
-                                </p>
-
-                                <p>
-                                    Package: 5.5 LPA
-                                </p>
-
-                                <button>
-                                    View Details
-                                </button>
-
-                            </div>
-
-                        </div>
+                        )}
 
                     </section>
 
@@ -2540,6 +3077,7 @@ const handleAddTask = (e) => {
                 <p>
                     View your personal and academic information.
                 </p>
+                {studentProfileError && <p role="alert">{studentProfileError}</p>}
 
             </div>
 
@@ -2562,11 +3100,11 @@ const handleAddTask = (e) => {
                 <div className="profile-header-info">
 
                     <h2>
-                        Sai Student
+                        {studentProfile?.name || studentProfile?.username || "Student"}
                     </h2>
 
                     <p>
-                        Student ID: EDU2026CSE001
+                        Roll No: {studentProfile?.rollNumber || studentProfile?.username || "—"}
                     </p>
 
                     <span className="profile-status">
@@ -2596,7 +3134,7 @@ const handleAddTask = (e) => {
                         </span>
 
                         <strong>
-                            Sai Student
+                            {studentProfile?.name || studentProfile?.username || "Student"}
                         </strong>
 
                     </div>
@@ -2609,7 +3147,7 @@ const handleAddTask = (e) => {
                         </span>
 
                         <strong>
-                            EDU2026CSE001
+                            {studentProfile?.rollNumber || studentProfile?.username || "—"}
                         </strong>
 
                     </div>
@@ -2622,7 +3160,7 @@ const handleAddTask = (e) => {
                         </span>
 
                         <strong>
-                            student@edulentra.com
+                            {studentProfile?.email || "Not provided"}
                         </strong>
 
                     </div>
@@ -2635,7 +3173,7 @@ const handleAddTask = (e) => {
                         </span>
 
                         <strong>
-                            +91 98765 43210
+                            {studentProfile?.phone || "Not provided"}
                         </strong>
 
                     </div>
@@ -2648,7 +3186,7 @@ const handleAddTask = (e) => {
                         </span>
 
                         <strong>
-                            15 June 2005
+                            {studentProfile?.dateOfBirth ? new Date(studentProfile.dateOfBirth).toLocaleDateString() : "Not provided"}
                         </strong>
 
                     </div>
@@ -2661,7 +3199,7 @@ const handleAddTask = (e) => {
                         </span>
 
                         <strong>
-                            Female
+                            {studentProfile?.gender || "Not provided"}
                         </strong>
 
                     </div>
@@ -2690,7 +3228,7 @@ const handleAddTask = (e) => {
                         </span>
 
                         <strong>
-                            Computer Science &amp; Engineering
+                            {studentProfile?.branch || "Not provided"}
                         </strong>
 
                     </div>
@@ -2703,7 +3241,7 @@ const handleAddTask = (e) => {
                         </span>
 
                         <strong>
-                            B.Tech
+                            {studentProfile?.course || "Not provided"}
                         </strong>
 
                     </div>
@@ -2716,7 +3254,7 @@ const handleAddTask = (e) => {
                         </span>
 
                         <strong>
-                            3rd Year
+                            {studentProfile?.year || "Not provided"}
                         </strong>
 
                     </div>
@@ -2729,7 +3267,7 @@ const handleAddTask = (e) => {
                         </span>
 
                         <strong>
-                            CSE-A
+                            {studentProfile?.section || "Not provided"}
                         </strong>
 
                     </div>
@@ -2742,7 +3280,7 @@ const handleAddTask = (e) => {
                         </span>
 
                         <strong>
-                            2024
+                            {studentProfile?.admissionYear || (studentProfile?.createdAt ? new Date(studentProfile.createdAt).getFullYear() : "Not provided")}
                         </strong>
 
                     </div>
@@ -2755,7 +3293,7 @@ const handleAddTask = (e) => {
                         </span>
 
                         <strong>
-                            5th Semester
+                            {studentProfile?.semester || "Not provided"}
                         </strong>
 
                     </div>
@@ -2784,7 +3322,7 @@ const handleAddTask = (e) => {
                         </span>
 
                         <strong>
-                            Raj Kumar
+                            {studentProfile?.guardianName || "Not provided"}
                         </strong>
 
                     </div>
@@ -2797,7 +3335,7 @@ const handleAddTask = (e) => {
                         </span>
 
                         <strong>
-                            Father
+                            {studentProfile?.guardianRelationship || "Not provided"}
                         </strong>
 
                     </div>
@@ -2810,7 +3348,7 @@ const handleAddTask = (e) => {
                         </span>
 
                         <strong>
-                            +91 91234 56789
+                            {studentProfile?.guardianPhone || "Not provided"}
                         </strong>
 
                     </div>
@@ -2823,7 +3361,7 @@ const handleAddTask = (e) => {
                         </span>
 
                         <strong>
-                            +91 91234 56789
+                            {studentProfile?.emergencyPhone || "Not provided"}
                         </strong>
 
                     </div>
@@ -2849,7 +3387,7 @@ const handleAddTask = (e) => {
                     </span>
 
                     <strong>
-                        Hyderabad, Telangana, India
+                        {studentProfile?.address || "Not provided"}
                     </strong>
 
                 </div>
@@ -3055,6 +3593,7 @@ const handleAddTask = (e) => {
                                     onClick={
                                         closeTaskModal
                                     }
+                                    disabled={isSavingTask}
                                 >
                                     Cancel
                                 </button>
@@ -3062,8 +3601,9 @@ const handleAddTask = (e) => {
                                 <button
                                     type="submit"
                                     className="save-task-button"
+                                    disabled={isSavingTask}
                                 >
-                                    Save Task
+                                    {isSavingTask ? "Saving..." : "Save Task"}
                                 </button>
 
                             </div>

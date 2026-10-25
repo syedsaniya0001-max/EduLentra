@@ -1,35 +1,54 @@
-import React, { useEffect, useState } from "react";
-import { facultyApi } from "../../../api/facultyApi";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  announcementAudienceLabel,
+  announcementsApi,
+} from "../../../api/announcementsApi";
 
 export default function AnnouncementManagement({ faculty }) {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const hasLoaded = useRef(false);
   const [showModal, setShowModal] = useState(false);
+  const [editingAnnouncementId, setEditingAnnouncementId] = useState("");
   const [alertMsg, setAlertMsg] = useState(null);
 
   const [formData, setFormData] = useState({
     title: "",
     category: "Academic",
     priority: "Normal",
-    targetAudience: "All Students",
+    targetRole: "STUDENT",
+    date: new Date().toISOString().slice(0, 10),
     message: ""
   });
 
-  useEffect(() => {
-    fetchAnnouncements();
-  }, []);
-
-  const fetchAnnouncements = async () => {
+  const fetchAnnouncements = useCallback(async () => {
     try {
-      setLoading(true);
-      const data = await facultyApi.getAnnouncements();
+      if (!hasLoaded.current) setLoading(true);
+      const data = await announcementsApi.getAll();
       setAnnouncements(data);
     } catch (err) {
-      console.error("Announcements error:", err);
+      setAlertMsg({
+        type: "error",
+        text: err.message || "Unable to load announcements."
+      });
     } finally {
+      hasLoaded.current = true;
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchAnnouncements();
+    return announcementsApi.subscribeToAnnouncementUpdates(
+      fetchAnnouncements,
+      () => {
+        setAlertMsg({
+          type: "error",
+          text: "Live updates are unavailable. Refresh to check for new announcements."
+        });
+      }
+    );
+  }, [fetchAnnouncements]);
 
   const handlePost = async (e) => {
     e.preventDefault();
@@ -39,37 +58,73 @@ export default function AnnouncementManagement({ faculty }) {
     }
 
     try {
-      await facultyApi.postAnnouncement({
+      const values = {
         ...formData,
-        postedBy: faculty?.name || "Dr. Ramesh Sharma"
-      });
+        createdByName: faculty?.name || ""
+      };
+      const announcement = editingAnnouncementId
+        ? await announcementsApi.update(editingAnnouncementId, values)
+        : await announcementsApi.create(values);
 
-      setAlertMsg({ type: "success", text: "Announcement broadcasted successfully!" });
+      setAnnouncements((current) =>
+        editingAnnouncementId
+          ? current.map((item) =>
+              item.id === editingAnnouncementId ? announcement : item
+            )
+          : [announcement, ...current]
+      );
+      setAlertMsg({
+        type: "success",
+        text: editingAnnouncementId
+          ? "Announcement updated."
+          : "Announcement broadcasted successfully!"
+      });
       setShowModal(false);
+      setEditingAnnouncementId("");
       setFormData({
         title: "",
         category: "Academic",
         priority: "Normal",
-        targetAudience: "All Students",
+        targetRole: "STUDENT",
+        date: new Date().toISOString().slice(0, 10),
         message: ""
       });
       fetchAnnouncements();
       setTimeout(() => setAlertMsg(null), 4000);
     } catch (err) {
-      setAlertMsg({ type: "error", text: "Failed to broadcast announcement." });
+      setAlertMsg({
+        type: "error",
+        text: err.message || "Unable to publish announcement."
+      });
     }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this announcement?")) return;
     try {
-      await facultyApi.deleteAnnouncement(id);
+      await announcementsApi.remove(id);
       setAlertMsg({ type: "info", text: "Announcement deleted." });
       fetchAnnouncements();
       setTimeout(() => setAlertMsg(null), 3000);
     } catch (err) {
-      alert("Failed to delete.");
+      setAlertMsg({
+        type: "error",
+        text: err.message || "Unable to delete announcement."
+      });
     }
+  };
+
+  const handleEdit = (announcement) => {
+    setEditingAnnouncementId(announcement.id);
+    setFormData({
+      title: announcement.title,
+      category: announcement.category || "Academic",
+      priority: announcement.priority || "Normal",
+      targetRole: announcement.targetRole || "STUDENT",
+      date: announcement.date || new Date().toISOString().slice(0, 10),
+      message: announcement.message,
+    });
+    setShowModal(true);
   };
 
   return (
@@ -102,7 +157,7 @@ export default function AnnouncementManagement({ faculty }) {
       {/* Announcements List */}
       {loading ? (
         <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>Loading announcements...</div>
-      ) : announcements.length === 0 ? (
+      ) : announcements.length === 0 && alertMsg?.type !== "error" ? (
         <div className="fac-card" style={{ textAlign: "center", padding: "40px" }}>
           <div style={{ fontSize: "40px", marginBottom: "12px" }}>📢</div>
           <h3 style={{ margin: "0 0 6px 0" }}>No Active Announcements</h3>
@@ -134,19 +189,31 @@ export default function AnnouncementManagement({ faculty }) {
                     {ann.priority} Priority
                   </span>
                   <span className="fac-badge fac-badge-purple">{ann.category}</span>
-                  <span style={{ fontSize: "12px", color: "#64748b" }}>Audience: <b>{ann.targetAudience}</b></span>
+                  <span style={{ fontSize: "12px", color: "#64748b" }}>Audience: <b>{announcementAudienceLabel(ann)}</b></span>
                 </div>
 
                 <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                   <span style={{ fontSize: "12px", color: "#94a3b8" }}>{ann.date}</span>
-                  <button
-                    className="fac-btn danger"
-                    style={{ padding: "4px 8px", fontSize: "11px" }}
-                    onClick={() => handleDelete(ann.id)}
-                    title="Delete Announcement"
-                  >
-                    🗑
-                  </button>
+                  {ann.canEdit && (
+                    <button
+                      className="fac-btn secondary"
+                      style={{ padding: "4px 8px", fontSize: "11px" }}
+                      onClick={() => handleEdit(ann)}
+                      title="Edit announcement"
+                    >
+                      Edit
+                    </button>
+                  )}
+                  {ann.canDelete && (
+                    <button
+                      className="fac-btn danger"
+                      style={{ padding: "4px 8px", fontSize: "11px" }}
+                      onClick={() => handleDelete(ann.id)}
+                      title="Delete Announcement"
+                    >
+                      🗑
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -159,7 +226,7 @@ export default function AnnouncementManagement({ faculty }) {
               </p>
 
               <div style={{ fontSize: "12px", color: "#64748b", borderTop: "1px solid var(--fac-border)", paddingTop: "8px" }}>
-                Broadcasted by: <span style={{ fontWeight: 600, color: "#0f172a" }}>{ann.postedBy}</span>
+                Broadcasted by: <span style={{ fontWeight: 600, color: "#0f172a" }}>{ann.createdByName || ann.postedBy || "Faculty"}</span>
               </div>
             </div>
           ))}
@@ -171,7 +238,9 @@ export default function AnnouncementManagement({ faculty }) {
         <div className="fac-modal-backdrop" onClick={() => setShowModal(false)}>
           <div className="fac-modal" onClick={(e) => e.stopPropagation()}>
             <div className="fac-modal-header">
-              <h3 className="fac-modal-title">Broadcast College Announcement</h3>
+              <h3 className="fac-modal-title">
+                {editingAnnouncementId ? "Edit Announcement" : "Broadcast College Announcement"}
+              </h3>
               <button className="fac-modal-close" onClick={() => setShowModal(false)}>
                 ✕
               </button>
@@ -223,13 +292,10 @@ export default function AnnouncementManagement({ faculty }) {
                 <label className="fac-form-label">Target Audience</label>
                 <select
                   className="fac-form-select"
-                  value={formData.targetAudience}
-                  onChange={(e) => setFormData({ ...formData, targetAudience: e.target.value })}
+                  value={formData.targetRole}
+                  onChange={(e) => setFormData({ ...formData, targetRole: e.target.value })}
                 >
-                  <option value="All Students">All Students</option>
-                  <option value="CSE - 3rd Year (Section A)">CSE - 3rd Year (Section A)</option>
-                  <option value="CSE - 2nd Year (Section B)">CSE - 2nd Year (Section B)</option>
-                  <option value="AIML - 3rd Year">AIML - 3rd Year</option>
+                  <option value="STUDENT">Students in my branch</option>
                 </select>
               </div>
 
@@ -246,11 +312,18 @@ export default function AnnouncementManagement({ faculty }) {
               </div>
 
               <div className="fac-btn-group">
-                <button type="button" className="fac-btn secondary" onClick={() => setShowModal(false)}>
+                <button
+                  type="button"
+                  className="fac-btn secondary"
+                  onClick={() => {
+                    setShowModal(false);
+                    setEditingAnnouncementId("");
+                  }}
+                >
                   Cancel
                 </button>
                 <button type="submit" className="fac-btn primary">
-                  Broadcast Notice
+                  {editingAnnouncementId ? "Save Changes" : "Broadcast Notice"}
                 </button>
               </div>
             </form>

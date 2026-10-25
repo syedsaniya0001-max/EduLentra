@@ -333,6 +333,45 @@
     font-size: 13px;
 }
 
+.student-header-actions {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+}
+
+.student-home-button {
+
+    min-height: 42px;
+
+    padding: 10px 14px;
+
+    border: 1px solid #e2e8f0;
+
+    border-radius: 11px;
+
+    background: #ffffff;
+
+    color: #173b72;
+
+    font: 600 14px Arial, Helvetica, sans-serif;
+
+    white-space: nowrap;
+
+    cursor: pointer;
+
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.student-home-button:hover {
+
+    background: #eff6ff;
+
+    border-color: #dbeafe;
+}
+
 
 /* =========================================================
    ATTENDANCE
@@ -517,6 +556,10 @@
     justify-content: center;
 
     background: #eff6ff;
+
+    border: 1px solid #dbeafe;
+
+    color: #173b72;
 
     border-radius: 12px;
 
@@ -1335,6 +1378,12 @@
     color: #ea580c;
 }
 
+.task-error {
+    margin-top: 12px;
+    color: #b91c1c;
+    font-size: 13px;
+}
+
 
 /* =========================================================
    TASK LIST
@@ -1960,7 +2009,9 @@
 }
 
 
-.announcement-list div {
+.announcement-list > div,
+.announcement-list > article,
+.announcement-list > p {
 
     padding: 20px;
 
@@ -1982,6 +2033,15 @@
 .announcement-list p {
 
     margin-top: 8px;
+
+    color: #64748b;
+}
+
+.announcement-list small {
+
+    display: block;
+
+    margin-top: 10px;
 
     color: #64748b;
 }
@@ -2477,6 +2537,14 @@
         align-items: flex-start;
 
         gap: 20px;
+    }
+
+    .student-header-actions {
+
+        width: 100%;
+
+        flex-wrap: wrap;
+
     }
 
 
@@ -3063,6 +3131,11 @@
 .attendance-table .attendance-good,
 .attendance-table .status-present {
     color: #15803d;
+    font-weight: 700;
+}
+
+.attendance-table .attendance-low {
+    color: #b91c1c;
     font-weight: 700;
 }
 

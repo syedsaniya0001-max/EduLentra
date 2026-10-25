@@ -1,29 +1,32 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { facultyApi } from "../../../api/facultyApi";
 
 export default function StudentList() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [branch, setBranch] = useState("All");
-  const [semester, setSemester] = useState("All");
+  const [section, setSection] = useState("All");
+  const [sections, setSections] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchStudents();
-  }, [search, branch, semester]);
-
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await facultyApi.getStudents(search, branch, semester);
-      setStudents(data);
-    } catch (err) {
-      console.error("Failed to load students:", err);
+      setError("");
+      const data = await facultyApi.getStudents(search, section);
+      setStudents(data.students);
+      setSections(data.sections);
+    } catch (loadError) {
+      setError(loadError.message || "Failed to load students.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, section]);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
 
   return (
     <div>
@@ -52,26 +55,19 @@ export default function StudentList() {
 
         <select
           className="fac-select-input"
-          value={branch}
-          onChange={(e) => setBranch(e.target.value)}
+          aria-label="Filter students by section"
+          value={section}
+          onChange={(e) => setSection(e.target.value)}
         >
-          <option value="All">All Branches</option>
-          <option value="CSE">CSE</option>
-          <option value="AIML">AIML</option>
-          <option value="A">Section A</option>
-          <option value="B">Section B</option>
+          <option value="All">All Sections</option>
+          {sections.map((item) => (
+            <option key={item} value={item}>{item}</option>
+          ))}
         </select>
 
-        <select
-          className="fac-select-input"
-          value={semester}
-          onChange={(e) => setSemester(e.target.value)}
-        >
-          <option value="All">All Semesters</option>
-          <option value="3">Semester 3 (2nd Year)</option>
-          <option value="5">Semester 5 (3rd Year)</option>
-        </select>
       </div>
+
+      {error && <p role="alert" style={{ color: "#b91c1c" }}>{error}</p>}
 
       {/* Students Table */}
       <div className="fac-card" style={{ padding: 0, overflow: "hidden" }}>
@@ -81,10 +77,9 @@ export default function StudentList() {
               <tr>
                 <th>Roll Number</th>
                 <th>Student Name</th>
-                <th>Branch & Section</th>
-                <th>Semester</th>
-                <th>Attendance</th>
-                <th>CGPA</th>
+                <th>Email</th>
+                <th>Branch</th>
+                <th>Entry Type</th>
                 <th>Status</th>
                 <th style={{ textAlign: "right" }}>Actions</th>
               </tr>
@@ -92,61 +87,33 @@ export default function StudentList() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>
+                  <td colSpan="7" style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>
                     Loading student records...
                   </td>
                 </tr>
               ) : students.length === 0 ? (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>
+                  <td colSpan="7" style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>
                     No students found matching current filters.
                   </td>
                 </tr>
               ) : (
                 students.map((student) => {
-                  const isLowAttendance = student.attendance < 75;
                   return (
                     <tr key={student.id}>
                       <td style={{ fontWeight: 700, color: "#1e3a8a" }}>{student.rollNumber}</td>
                       <td>
                         <div style={{ fontWeight: 600 }}>{student.name}</div>
-                        <div style={{ fontSize: "11.5px", color: "#64748b" }}>{student.email}</div>
                       </td>
+                      <td>{student.email || "—"}</td>
                       <td>
                         <span className="fac-badge fac-badge-blue">
-                          {student.branch} - Sec {student.section}
+                          {student.branch}{student.section ? ` - Sec ${student.section}` : ""}
                         </span>
                       </td>
-                      <td>Sem {student.semester}</td>
+                      <td>{student.entryType || "—"}</td>
                       <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <span
-                            className={`fac-badge ${
-                              student.attendance >= 85
-                                ? "fac-badge-green"
-                                : student.attendance >= 75
-                                ? "fac-badge-amber"
-                                : "fac-badge-red"
-                            }`}
-                          >
-                            {student.attendance}%
-                          </span>
-                          {isLowAttendance && (
-                            <span title="Attendance below 75% requirement" style={{ cursor: "pointer", fontSize: "14px" }}>
-                              ⚠️
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td style={{ fontWeight: 700 }}>{student.cgpa}</td>
-                      <td>
-                        <span
-                          className={`fac-badge ${
-                            isLowAttendance ? "fac-badge-red" : "fac-badge-green"
-                          }`}
-                        >
-                          {student.status || "Active"}
-                        </span>
+                        <span className="fac-badge fac-badge-green">Active</span>
                       </td>
                       <td style={{ textAlign: "right" }}>
                         <button
@@ -197,53 +164,36 @@ export default function StudentList() {
               <div>
                 <h4 style={{ margin: "0 0 4px 0", fontSize: "18px" }}>{selectedStudent.name}</h4>
                 <div style={{ fontSize: "13px", color: "#64748b" }}>
-                  Roll No: <span style={{ fontWeight: 700, color: "#0f172a" }}>{selectedStudent.rollNumber}</span> | {selectedStudent.department}
+                  Roll No: <span style={{ fontWeight: 700, color: "#0f172a" }}>{selectedStudent.rollNumber}</span>
                 </div>
               </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", fontSize: "13.5px" }}>
               <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px", border: "1px solid var(--fac-border)" }}>
-                <span style={{ color: "#64748b", fontSize: "12px" }}>Class & Section:</span>
+                <span style={{ color: "#64748b", fontSize: "12px" }}>Branch:</span>
                 <div style={{ fontWeight: 600, marginTop: "2px" }}>
-                  {selectedStudent.branch} - Year {selectedStudent.year} (Sem {selectedStudent.semester})
+                  {selectedStudent.branch}{selectedStudent.section ? ` - Section ${selectedStudent.section}` : ""}
                 </div>
               </div>
 
               <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px", border: "1px solid var(--fac-border)" }}>
-                <span style={{ color: "#64748b", fontSize: "12px" }}>Cumulative CGPA:</span>
-                <div style={{ fontWeight: 700, color: "#16a34a", fontSize: "15px", marginTop: "2px" }}>
-                  {selectedStudent.cgpa} / 10.0
+                <span style={{ color: "#64748b", fontSize: "12px" }}>Registered Email:</span>
+                <div style={{ fontWeight: 600, marginTop: "2px" }}>
+                  {selectedStudent.email || "—"}
                 </div>
               </div>
 
               <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px", border: "1px solid var(--fac-border)" }}>
-                <span style={{ color: "#64748b", fontSize: "12px" }}>Current Attendance:</span>
-                <div
-                  style={{
-                    fontWeight: 700,
-                    color: selectedStudent.attendance >= 75 ? "#16a34a" : "#dc2626",
-                    fontSize: "15px",
-                    marginTop: "2px"
-                  }}
-                >
-                  {selectedStudent.attendance}%
+                <span style={{ color: "#64748b", fontSize: "12px" }}>Entry Type:</span>
+                <div style={{ fontWeight: 600, marginTop: "2px" }}>
+                  {selectedStudent.entryType || "—"}
                 </div>
               </div>
 
               <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px", border: "1px solid var(--fac-border)" }}>
-                <span style={{ color: "#64748b", fontSize: "12px" }}>Hostel Accommodation:</span>
-                <div style={{ fontWeight: 600, marginTop: "2px" }}>{selectedStudent.hostelRoom}</div>
-              </div>
-
-              <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px", border: "1px solid var(--fac-border)" }}>
-                <span style={{ color: "#64748b", fontSize: "12px" }}>Student Contact:</span>
-                <div style={{ fontWeight: 600, marginTop: "2px" }}>{selectedStudent.phone}</div>
-              </div>
-
-              <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px", border: "1px solid var(--fac-border)" }}>
-                <span style={{ color: "#64748b", fontSize: "12px" }}>Parent / Guardian Phone:</span>
-                <div style={{ fontWeight: 600, marginTop: "2px" }}>{selectedStudent.parentPhone}</div>
+                <span style={{ color: "#64748b", fontSize: "12px" }}>Account Status:</span>
+                <div style={{ fontWeight: 600, marginTop: "2px" }}>Active</div>
               </div>
             </div>
 

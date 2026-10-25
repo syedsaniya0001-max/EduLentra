@@ -1,8 +1,8 @@
-// API Configuration - Change this ONE place to switch between local and remote backend
+const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, "");
 
-// LOCAL BACKEND (for development)
-// export const API_BASE_URL = 'http://localhost:5000';
-export const API_BASE_URL = "https://lms-backend-01-yn35.onrender.com";
+if (!configuredApiUrl && !import.meta.env.DEV) {
+  throw new Error("Set VITE_API_BASE_URL to the deployed EduLentra API URL.");
+}
 
-// REMOTE BACKEND (for production on Render)
-// export const API_BASE_URL = 'https://lms-backend-01-yn35.onrender.com';
+export const API_BASE_URL =
+  configuredApiUrl || (import.meta.env.DEV ? "http://localhost:5000" : "");

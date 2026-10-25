@@ -1,178 +1,226 @@
+import { useEffect, useMemo, useState } from "react";
+import { complaintsApi } from "../../../../../api/complaintsApi";
 import HODLayout from "../../components/hod/HODLayout";
 import "../../styles/hod/ComplaintManagement.css";
 
+const statusLabels = {
+  PENDING: "Pending",
+  UNDER_REVIEW: "Under Review",
+  RESOLVED: "Resolved",
+};
+
 function ComplaintManagement() {
-  const complaints = [
-    {
-      id: "CMP001",
-      student: "Rahul Kumar",
-      studentId: "STU001",
-      subject: "Classroom Facilities",
-      date: "02 Oct 2026",
-      priority: "Medium",
-      status: "Pending",
-    },
-    {
-      id: "CMP002",
-      student: "Priya Reddy",
-      studentId: "STU002",
-      subject: "Faculty Concern",
-      date: "01 Oct 2026",
-      priority: "High",
-      status: "Under Review",
-    },
-    {
-      id: "CMP003",
-      student: "Arjun Sharma",
-      studentId: "STU003",
-      subject: "Attendance Issue",
-      date: "30 Sep 2026",
-      priority: "Low",
-      status: "Resolved",
-    },
-    {
-      id: "CMP004",
-      student: "Sneha Rao",
-      studentId: "STU004",
-      subject: "Laboratory Equipment",
-      date: "29 Sep 2026",
-      priority: "High",
-      status: "Pending",
-    },
-  ];
+  const [complaints, setComplaints] = useState([]);
+  const [selectedComplaint, setSelectedComplaint] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [response, setResponse] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    complaintsApi.getDepartment()
+      .then((items) => {
+        if (!cancelled) setComplaints(items);
+      })
+      .catch((requestError) => {
+        if (!cancelled) {
+          setError(requestError.message || "Unable to load department complaints.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const counts = useMemo(() => ({
+    total: complaints.length,
+    pending: complaints.filter((item) => item.status === "PENDING").length,
+    review: complaints.filter((item) => item.status === "UNDER_REVIEW").length,
+    resolved: complaints.filter((item) => item.status === "RESOLVED").length,
+  }), [complaints]);
+
+  const filteredComplaints = statusFilter === "ALL"
+    ? complaints
+    : complaints.filter((item) => item.status === statusFilter);
+
+  const openComplaint = (complaint) => {
+    setSelectedComplaint(complaint);
+    setResponse(complaint.response || "");
+    setNotice("");
+  };
+
+  const saveComplaintUpdate = async (event) => {
+    event.preventDefault();
+    if (!selectedComplaint || isSaving) return;
+
+    setIsSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const updatedComplaint = await complaintsApi.update(selectedComplaint._id, {
+        status: selectedComplaint.status === "RESOLVED" ? "RESOLVED" : "UNDER_REVIEW",
+        response,
+      });
+      setComplaints((items) => items.map((item) =>
+        item._id === updatedComplaint._id ? { ...item, ...updatedComplaint } : item
+      ));
+      setSelectedComplaint(updatedComplaint);
+      setNotice("Complaint review saved.");
+    } catch (requestError) {
+      setError(requestError.message || "Unable to update this complaint.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const resolveComplaint = async () => {
+    if (!selectedComplaint || isSaving) return;
+
+    setIsSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const updatedComplaint = await complaintsApi.update(selectedComplaint._id, {
+        status: "RESOLVED",
+        response,
+      });
+      setComplaints((items) => items.map((item) =>
+        item._id === updatedComplaint._id ? { ...item, ...updatedComplaint } : item
+      ));
+      setSelectedComplaint(updatedComplaint);
+      setNotice("Complaint marked as resolved.");
+    } catch (requestError) {
+      setError(requestError.message || "Unable to resolve this complaint.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <HODLayout>
-
       <div className="complaint-management">
-
-        {/* Page Header */}
         <div className="complaint-page-header">
-          <div>
-            <h2>Complaint Management</h2>
-            <p>
-              Review and manage student complaints and department concerns.
-            </p>
-          </div>
+          <h2>Complaint Management</h2>
+          <p>Review student complaints from your department and send a response.</p>
         </div>
 
-        {/* Summary Cards */}
+        {error && <p role="alert">{error}</p>}
+        {notice && <p role="status">{notice}</p>}
+
         <div className="complaint-summary">
-
-          <div className="complaint-summary-card">
-            <span>Total Complaints</span>
-            <strong>36</strong>
-          </div>
-
-          <div className="complaint-summary-card pending-card">
-            <span>Pending</span>
-            <strong>12</strong>
-          </div>
-
-          <div className="complaint-summary-card review-card">
-            <span>Under Review</span>
-            <strong>8</strong>
-          </div>
-
-          <div className="complaint-summary-card resolved-card">
-            <span>Resolved</span>
-            <strong>16</strong>
-          </div>
-
+          <div className="complaint-summary-card"><span>Total Complaints</span><strong>{counts.total}</strong></div>
+          <div className="complaint-summary-card pending-card"><span>Pending</span><strong>{counts.pending}</strong></div>
+          <div className="complaint-summary-card review-card"><span>Under Review</span><strong>{counts.review}</strong></div>
+          <div className="complaint-summary-card resolved-card"><span>Resolved</span><strong>{counts.resolved}</strong></div>
         </div>
 
-        {/* Complaints Table */}
         <div className="complaint-table-container">
-
           <div className="complaint-table-header">
-
             <div>
               <h3>Student Complaints</h3>
-              <p>Department complaint records</p>
+              <p>Only complaints for your department are shown.</p>
             </div>
-
-            <select>
-              <option>All Status</option>
-              <option>Pending</option>
-              <option>Under Review</option>
-              <option>Resolved</option>
-            </select>
-
+            <label>
+              Filter by status
+              <select
+                aria-label="Filter complaints by status"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+              >
+                <option value="ALL">All statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="UNDER_REVIEW">Under Review</option>
+                <option value="RESOLVED">Resolved</option>
+              </select>
+            </label>
           </div>
 
           <div className="complaint-table-wrapper">
-
             <table>
-
               <thead>
                 <tr>
-                  <th>Complaint ID</th>
                   <th>Student</th>
                   <th>Student ID</th>
                   <th>Subject</th>
                   <th>Date</th>
-                  <th>Priority</th>
                   <th>Status</th>
                   <th>Action</th>
                 </tr>
               </thead>
-
               <tbody>
-
-                {complaints.map((complaint) => (
-
-                  <tr key={complaint.id}>
-
-                    <td>
-                      <strong>{complaint.id}</strong>
-                    </td>
-
-                    <td>{complaint.student}</td>
-
-                    <td>{complaint.studentId}</td>
-
+                {filteredComplaints.map((complaint) => (
+                  <tr key={complaint._id}>
+                    <td>{complaint.student?.name || "Student"}</td>
+                    <td>{complaint.student?.rollNumber || "—"}</td>
                     <td>{complaint.subject}</td>
-
-                    <td>{complaint.date}</td>
-
+                    <td>{new Date(complaint.createdAt).toLocaleDateString()}</td>
                     <td>
-                      <span
-                        className={`complaint-priority ${complaint.priority.toLowerCase()}`}
-                      >
-                        {complaint.priority}
+                      <span className={`complaint-status ${complaint.status.toLowerCase().replaceAll("_", "-")}`}>
+                        {statusLabels[complaint.status] || complaint.status}
                       </span>
                     </td>
-
                     <td>
-                      <span
-                        className={`complaint-status ${complaint.status
-                          .toLowerCase()
-                          .replace(" ", "-")}`}
+                      <button
+                        className="complaint-view-btn"
+                        type="button"
+                        onClick={() => openComplaint(complaint)}
                       >
-                        {complaint.status}
-                      </span>
-                    </td>
-
-                    <td>
-                      <button className="complaint-view-btn">
-                        View
+                        Review
                       </button>
                     </td>
-
                   </tr>
-
                 ))}
-
+                {!isLoading && filteredComplaints.length === 0 && (
+                  <tr>
+                    <td colSpan="6">No complaints found.</td>
+                  </tr>
+                )}
+                {isLoading && (
+                  <tr>
+                    <td colSpan="6">Loading complaints...</td>
+                  </tr>
+                )}
               </tbody>
-
             </table>
-
           </div>
-
         </div>
 
+        {selectedComplaint && (
+          <section className="complaint-review-panel" aria-label="Complaint review">
+            <h3>{selectedComplaint.subject}</h3>
+            <p><strong>From:</strong> {selectedComplaint.student?.name || "Student"} ({selectedComplaint.student?.rollNumber || "—"})</p>
+            <p>{selectedComplaint.description}</p>
+            {selectedComplaint.status === "RESOLVED" ? (
+              <p><strong>Department response:</strong> {selectedComplaint.response || "No response was provided."}</p>
+            ) : (
+              <form onSubmit={saveComplaintUpdate}>
+                <label htmlFor="complaint-response">Response to student</label>
+                <textarea
+                  id="complaint-response"
+                  value={response}
+                  onChange={(event) => setResponse(event.target.value)}
+                  maxLength={3000}
+                  rows={4}
+                  required
+                />
+                <button type="submit" disabled={isSaving}>
+                  {isSaving ? "Saving..." : "Save review"}
+                </button>
+                <button type="button" disabled={isSaving} onClick={resolveComplaint}>
+                  {isSaving ? "Saving..." : "Resolve complaint"}
+                </button>
+              </form>
+            )}
+          </section>
+        )}
       </div>
-
     </HODLayout>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../api/config";
 
 import "./StudentSignup.css";
 
@@ -26,6 +27,7 @@ function StudentSignup() {
 
     const [formData, setFormData] =
         useState(emptyFormData);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
 
     /* =========================
@@ -50,7 +52,7 @@ function StudentSignup() {
        REGISTER
     ========================= */
 
-    const handleRegister = (e) => {
+    const handleRegister = async (e) => {
 
         e.preventDefault();
 
@@ -95,126 +97,45 @@ function StudentSignup() {
         }
 
 
-        /* =========================
-           CREATE AUTHORITY RECORD
-        ========================= */
-
-        const registrationDetails = {
-
-            name:
-                formData.name.trim(),
-
-            rollNumber:
-                formData.rollNumber.trim(),
-
-            email:
-                formData.email.trim(),
-
-            department:
-                formData.department.trim(),
-
-            section:
-                formData.section.trim(),
-
-            studentType:
-                formData.studentType,
-
-            status:
-                "Pending Approval",
-
-            submittedAt:
-                new Date().toISOString()
-        };
-
-
-        /* =========================
-           GET EXISTING DATA
-        ========================= */
-
-        let pendingStudents = [];
-
+        setIsSubmitting(true);
         try {
-
-            const existingData =
-                localStorage.getItem(
-                    "pendingStudentRegistrations"
-                );
-
-            if (existingData) {
-
-                pendingStudents =
-                    JSON.parse(existingData);
+            const response = await fetch(`${API_BASE_URL}/api/students/signup`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: formData.name.trim(),
+                    rollNumber: formData.rollNumber.trim(),
+                    email: formData.email.trim(),
+                    branch: formData.department.trim(),
+                    section: formData.section.trim(),
+                    entryType: formData.studentType,
+                    password: formData.password,
+                }),
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                alert(result.message || "Registration failed. Please try again.");
+                return;
             }
 
-        } catch (error) {
-
-            console.error(error);
-
-            pendingStudents = [];
-        }
-
-
-        /* =========================
-           ADD REGISTRATION
-        ========================= */
-
-        pendingStudents.push(
-            registrationDetails
-        );
-
-
-        /* =========================
-           SAVE
-        ========================= */
-
-        try {
-
-            localStorage.setItem(
-                "pendingStudentRegistrations",
-                JSON.stringify(
-                    pendingStudents
-                )
+            alert(
+                result.message ||
+                "Your registration has been submitted for Faculty approval."
             );
-
+            setFormData(emptyFormData);
+            navigate("/student");
         } catch (error) {
-
-            console.error(error);
+            console.error("Student signup error:", error);
+            alert("Unable to connect to the EduLentra backend.");
+        } finally {
+            setIsSubmitting(false);
         }
-
-
-        /* =========================
-           SUCCESS ALERT
-        ========================= */
-
-        alert(
-            "Details sent successfully!\n\n" +
-            "Your registration has been submitted " +
-            "to the Class Teacher / Authority.\n\n" +
-            "Please wait for approval."
-        );
-
-
-        /* =========================
-           CLEAR USER DETAILS
-        ========================= */
-
-        setFormData(
-            emptyFormData
-        );
-
-
-        /* =========================
-           GO TO LOGIN
-        ========================= */
-
-        navigate("/student");
     };
 
 
     return (
 
         <div className="signup-page">
-
             <div className="signup-card">
 
 
@@ -328,6 +249,7 @@ function StudentSignup() {
                         type="password"
                         name="password"
                         placeholder="Create Password"
+                        minLength={8}
                         value={formData.password}
                         onChange={handleChange}
                         autoComplete="new-password"
@@ -340,6 +262,7 @@ function StudentSignup() {
                         type="password"
                         name="confirmPassword"
                         placeholder="Confirm Password"
+                        minLength={8}
                         value={formData.confirmPassword}
                         onChange={handleChange}
                         autoComplete="new-password"
@@ -348,42 +271,18 @@ function StudentSignup() {
 
                     {/* REGISTER */}
 
-                    <button type="submit">
-                        Register
+                    <button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? "Submitting..." : "Register"}
                     </button>
 
                 </form>
 
-
-                {/* LOGIN */}
-
-                <p className="account-text">
-
-                    Already have an account?
-
-                    <button
-                        type="button"
-                        className="login-link"
-                        onClick={() =>
-                            navigate("/student")
-                        }
-                    >
-                        Login
-                    </button>
-
-                </p>
-
-
-                {/* BACK */}
-
                 <button
                     type="button"
                     className="back-login-btn"
-                    onClick={() =>
-                        navigate("/student")
-                    }
+                    onClick={() => navigate("/student")}
                 >
-                    ← Back to Login
+                    Back to Login
                 </button>
 
             </div>

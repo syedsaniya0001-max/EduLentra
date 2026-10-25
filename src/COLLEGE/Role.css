@@ -33,6 +33,29 @@ body{
         #f7faff;
 }
 
+.role-back-btn {
+    position: fixed;
+    top: 20px;
+    left: 24px;
+    z-index: 10;
+    padding: 9px 18px;
+    border: none;
+    border-radius: 8px;
+    background: #eef4ff;
+    color: #1e3a8a;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s ease;
+}
+
+.role-back-btn:hover {
+    background: #1e3a8a;
+    color: white;
+    transform: translateX(-3px);
+    box-shadow: 0 6px 15px rgba(30, 58, 138, 0.2);
+}
+
 .title{
     color: #1e3a8a;
     font-size: 50px;
@@ -142,6 +165,12 @@ body{
 /* Responsive */
 
 @media (max-width:650px){
+    .role-back-btn {
+        top: 12px;
+        left: 12px;
+        padding: 8px 12px;
+        font-size: 14px;
+    }
 
     .role-container{
         grid-template-columns: 1fr;

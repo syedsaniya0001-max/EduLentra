@@ -2,25 +2,26 @@ const mongoose = require("mongoose");
 
 const adminSchema = new mongoose.Schema(
   {
-    adminId: {
+    name: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+      default: "",
+    },
+
+    username: {
       type: String,
       required: true,
       unique: true,
       trim: true,
-    },
-
-    name: {
-      type: String,
-      required: true,
-      trim: true,
+      lowercase: true,
     },
 
     email: {
       type: String,
-      required: true,
-      unique: true,
       lowercase: true,
       trim: true,
+      match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     },
 
     password: {
@@ -37,6 +38,11 @@ const adminSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+
+    isSampleAccount: {
+      type: Boolean,
+      default: false,
     },
   },
   {

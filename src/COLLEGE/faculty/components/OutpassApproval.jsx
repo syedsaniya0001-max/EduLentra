@@ -1,6 +1,18 @@
 import React, { useEffect, useState } from "react";
 import { facultyApi } from "../../../api/facultyApi";
 
+const normalizeStatus = (status) => {
+  if (typeof status !== "string") return "pending";
+  return status.trim().toLowerCase();
+};
+
+const statusLabel = (status) => {
+  const value = normalizeStatus(status);
+  if (value === "approved") return "Approved";
+  if (value === "rejected") return "Rejected";
+  return "Pending";
+};
+
 export default function OutpassApproval() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -8,6 +20,7 @@ export default function OutpassApproval() {
   const [actionModal, setActionModal] = useState(null); // { type: 'approve' | 'reject', request: obj }
   const [remarks, setRemarks] = useState("");
   const [alertMsg, setAlertMsg] = useState(null);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     fetchOutpasses();
@@ -16,10 +29,11 @@ export default function OutpassApproval() {
   const fetchOutpasses = async () => {
     try {
       setLoading(true);
+      setLoadError("");
       const data = await facultyApi.getOutpasses();
       setRequests(data);
     } catch (err) {
-      console.error("Outpass error:", err);
+      setLoadError(err.message || "Unable to load outpass requests.");
     } finally {
       setLoading(false);
     }
@@ -32,10 +46,10 @@ export default function OutpassApproval() {
       setAlertMsg({ type: "success", text: `Outpass for ${actionModal.request.studentName} approved!` });
       setActionModal(null);
       setRemarks("");
-      fetchOutpasses();
+      await fetchOutpasses();
       setTimeout(() => setAlertMsg(null), 4000);
     } catch (err) {
-      setAlertMsg({ type: "error", text: "Failed to approve outpass." });
+      setAlertMsg({ type: "error", text: err.message || "Failed to approve outpass." });
     }
   };
 
@@ -50,19 +64,19 @@ export default function OutpassApproval() {
       setAlertMsg({ type: "info", text: `Outpass for ${actionModal.request.studentName} rejected.` });
       setActionModal(null);
       setRemarks("");
-      fetchOutpasses();
+      await fetchOutpasses();
       setTimeout(() => setAlertMsg(null), 4000);
     } catch (err) {
-      setAlertMsg({ type: "error", text: "Failed to reject outpass." });
+      setAlertMsg({ type: "error", text: err.message || "Failed to reject outpass." });
     }
   };
 
   const filtered = requests.filter((r) => {
     if (filter === "All") return true;
-    return r.status === filter;
+    return normalizeStatus(r.status) === filter.toLowerCase();
   });
 
-  const pendingCount = requests.filter((r) => r.status === "Pending").length;
+  const pendingCount = requests.filter((r) => normalizeStatus(r.status) === "pending").length;
 
   return (
     <div>
@@ -71,7 +85,7 @@ export default function OutpassApproval() {
         <div>
           <h2 style={{ fontSize: "20px", fontWeight: 800, margin: 0 }}>Outpass Requests & Gate Passes</h2>
           <p style={{ fontSize: "13px", color: "var(--fac-text-muted)", margin: "4px 0 0 0" }}>
-            Review, verify parent contacts, and grant electronic gate passes for hostel students.
+            Review and decide outpass requests for students in your assigned branch.
           </p>
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
@@ -112,6 +126,13 @@ export default function OutpassApproval() {
       {/* Outpass Cards */}
       {loading ? (
         <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>Loading outpasses...</div>
+      ) : loadError ? (
+        <div className="fac-card" style={{ textAlign: "center", padding: "40px" }}>
+          <p role="alert" style={{ color: "#b91c1c" }}>{loadError}</p>
+          <button type="button" className="fac-btn secondary" onClick={fetchOutpasses}>
+            Retry
+          </button>
+        </div>
       ) : filtered.length === 0 ? (
         <div className="fac-card" style={{ textAlign: "center", padding: "40px" }}>
           <div style={{ fontSize: "40px", marginBottom: "12px" }}>🎫</div>
@@ -121,8 +142,10 @@ export default function OutpassApproval() {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))", gap: "20px" }}>
           {filtered.map((req) => {
-            const isPending = req.status === "Pending";
-            const isApproved = req.status === "Approved";
+            const statusValue = normalizeStatus(req.status);
+            const isPending = statusValue === "pending";
+            const isApproved = statusValue === "approved";
+            const statusText = statusLabel(req.status);
 
             return (
               <div
@@ -141,7 +164,9 @@ export default function OutpassApproval() {
                       {req.studentName}
                     </h3>
                     <div style={{ fontSize: "12.5px", color: "#2563eb", fontWeight: 600 }}>
-                      Roll No: {req.rollNumber} • {req.hostelRoom}
+                      Roll No: {req.rollNumber}
+                      {req.branch && ` • ${req.branch}`}
+                      {req.section && ` • Section ${req.section}`}
                     </div>
                   </div>
 
@@ -150,7 +175,7 @@ export default function OutpassApproval() {
                       isPending ? "fac-badge-amber" : isApproved ? "fac-badge-green" : "fac-badge-red"
                     }`}
                   >
-                    {req.status}
+                    {statusText}
                   </span>
                 </div>
 
@@ -185,17 +210,7 @@ export default function OutpassApproval() {
                   </div>
                 </div>
 
-                {/* Contact numbers */}
-                <div style={{ fontSize: "12.5px", color: "#475569", marginBottom: "14px", display: "flex", justifyContent: "space-between" }}>
-                  <span>
-                    📞 Parent: <a href={`tel:${req.parentPhone}`} style={{ color: "#2563eb", fontWeight: 600 }}>{req.parentPhone}</a>
-                  </span>
-                  <span>
-                    📱 Student: <a href={`tel:${req.studentPhone}`} style={{ color: "#2563eb", fontWeight: 600 }}>{req.studentPhone}</a>
-                  </span>
-                </div>
-
-                {req.facultyRemarks && (
+                {(req.facultyRemarks || req.rejectionReason) && (
                   <div
                     style={{
                       fontSize: "12px",
@@ -206,7 +221,7 @@ export default function OutpassApproval() {
                       marginBottom: "12px"
                     }}
                   >
-                    <b>Faculty Remark:</b> {req.facultyRemarks}
+                    <b>{isApproved ? "Approval Note:" : "Faculty Remark:"}</b> {req.facultyRemarks || req.rejectionReason}
                   </div>
                 )}
 
@@ -236,7 +251,8 @@ export default function OutpassApproval() {
                   </div>
                 ) : isApproved ? (
                   <div style={{ textAlign: "center", padding: "6px", background: "#f0fdf4", borderRadius: "6px", fontSize: "12px", color: "#15803d", fontWeight: 700 }}>
-                    Gate Pass Issued • Gate Pass ID: GP-{req.id}
+                    Outpass approved
+                    {req.reviewedAt && ` on ${new Date(req.reviewedAt).toLocaleString()}`}
                   </div>
                 ) : null}
               </div>
