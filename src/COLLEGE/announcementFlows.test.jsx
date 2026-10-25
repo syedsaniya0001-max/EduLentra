@@ -13,6 +13,29 @@ const apiMocks = vi.hoisted(() => ({
   subscribeToAnnouncementUpdates: vi.fn(() => () => {}),
 }));
 
+const placementMocks = vi.hoisted(() => ({
+  getAll: vi.fn(),
+  create: vi.fn(),
+  remove: vi.fn(),
+}));
+
+const eventMocks = vi.hoisted(() => ({
+  getAll: vi.fn(),
+  create: vi.fn(),
+  remove: vi.fn(),
+}));
+
+const galleryMocks = vi.hoisted(() => ({
+  getAll: vi.fn(),
+  create: vi.fn(),
+  remove: vi.fn(),
+}));
+
+const notificationMocks = vi.hoisted(() => ({
+  getMine: vi.fn(),
+  markAllRead: vi.fn(),
+}));
+
 const approvalMocks = vi.hoisted(() => ({
   directory: vi.fn(),
   list: vi.fn(),
@@ -36,6 +59,22 @@ vi.mock("../api/announcementsApi", () => ({
 
 vi.mock("../api/roleApprovalApi", () => ({
   roleApprovalApi: approvalMocks,
+}));
+
+vi.mock("../api/placementsApi", () => ({
+  placementsApi: placementMocks,
+}));
+
+vi.mock("../api/eventsApi", () => ({
+  eventsApi: eventMocks,
+}));
+
+vi.mock("../api/galleryApi", () => ({
+  galleryApi: galleryMocks,
+}));
+
+vi.mock("../api/notificationsApi", () => ({
+  notificationsApi: notificationMocks,
 }));
 
 vi.mock("./PortalBackButton", () => ({ default: () => null }));
@@ -75,6 +114,17 @@ describe("role-aware announcement flows", () => {
     approvalMocks.list.mockReset();
     approvalMocks.list.mockResolvedValue({ requests: [] });
     apiMocks.getAll.mockResolvedValue([]);
+    placementMocks.getAll.mockReset().mockResolvedValue([]);
+    placementMocks.create.mockReset();
+    placementMocks.remove.mockReset();
+    eventMocks.getAll.mockReset().mockResolvedValue([]);
+    eventMocks.create.mockReset();
+    eventMocks.remove.mockReset();
+    galleryMocks.getAll.mockReset().mockResolvedValue([]);
+    galleryMocks.create.mockReset();
+    galleryMocks.remove.mockReset();
+    notificationMocks.getMine.mockReset().mockResolvedValue([]);
+    notificationMocks.markAllRead.mockReset().mockResolvedValue({});
     sessionStorage.clear();
     localStorage.clear();
     globalThis.fetch = vi.fn(async () => ({
@@ -131,6 +181,7 @@ describe("role-aware announcement flows", () => {
     await user.type(screen.getByPlaceholderText("Password"), "valid-password");
     await user.click(screen.getByRole("button", { name: "Login" }));
 
+    expect(await screen.findByRole("heading", { name: /campus-admin/i })).not.toBeNull();
     await user.click(await screen.findByRole("button", { name: /announcements/i }));
     await user.type(screen.getByLabelText("Announcement title"), "Student orientation");
     await user.selectOptions(screen.getByLabelText("Announcement audience"), "STUDENT");
@@ -149,6 +200,213 @@ describe("role-aware announcement flows", () => {
     );
     expect(await screen.findByText("Student orientation")).not.toBeNull();
     expect(screen.getByRole("status").textContent).toMatch(/published/i);
+  });
+
+  it("lets administrators find and filter students from branches outside the preset list", async () => {
+    const user = userEvent.setup();
+    approvalMocks.directory.mockImplementation(async (role) => {
+      if (role === "students") {
+        return {
+          students: [{
+            _id: "bio-student",
+            name: "Kai Student",
+            rollNumber: "BIO-001",
+            branch: "BIO-TECH",
+            section: "A",
+          }],
+        };
+      }
+      return role === "faculty" ? { faculty: [] } : { hods: [] };
+    });
+
+    renderInRouter(<Admin />);
+    await user.type(screen.getByPlaceholderText("Admin ID"), "campus-admin");
+    await user.type(screen.getByPlaceholderText("Password"), "correct-password");
+    await user.click(screen.getByRole("button", { name: "Login" }));
+
+    const branchCard = await screen.findByRole("button", { name: /BIO-TECH/ });
+    await user.click(branchCard);
+
+    expect(await screen.findByText("Kai Student")).not.toBeNull();
+    expect(screen.getByText("BIO-TECH · A")).not.toBeNull();
+  });
+
+  it("lets an administrator publish a placement to the database service", async () => {
+    const user = userEvent.setup();
+    placementMocks.create.mockImplementation(async (draft) => ({
+      ...draft,
+      id: "placement-1",
+    }));
+    renderInRouter(<Admin />);
+
+    await user.type(screen.getByPlaceholderText("Admin ID"), "campus-admin");
+    await user.type(screen.getByPlaceholderText("Password"), "valid-password");
+    await user.click(screen.getByRole("button", { name: "Login" }));
+    await user.click(await screen.findByRole("button", { name: /Placements/ }));
+    await user.type(screen.getByLabelText("Company name"), "Example Corp");
+    await user.type(screen.getByLabelText("Job role"), "Graduate Engineer");
+    await user.type(screen.getByLabelText("Placement location"), "Hyderabad");
+    await user.type(screen.getByLabelText("Placement details"), "Apply through the careers portal.");
+    await user.click(screen.getByRole("button", { name: "Publish placement" }));
+
+    expect(placementMocks.create).toHaveBeenCalledWith(expect.objectContaining({
+      company: "Example Corp",
+      role: "Graduate Engineer",
+      branch: "ECE",
+      location: "Hyderabad",
+      description: "Apply through the careers portal.",
+    }));
+    expect(await screen.findByText("Example Corp")).not.toBeNull();
+  });
+
+  it("lets an administrator publish an event and shows it to students", async () => {
+    const user = userEvent.setup();
+    const event = {
+      id: "campus-event-1",
+      title: "Science Fair",
+      category: "Academic",
+      date: "2026-11-15",
+      location: "Main Hall",
+      description: "Student research showcase",
+    };
+    eventMocks.create.mockResolvedValue(event);
+    renderInRouter(<Admin />);
+
+    await user.type(screen.getByPlaceholderText("Admin ID"), "campus-admin");
+    await user.type(screen.getByPlaceholderText("Password"), "valid-password");
+    await user.click(screen.getByRole("button", { name: "Login" }));
+    await user.click(await screen.findByRole("button", { name: /Events/ }));
+    await user.type(screen.getByLabelText("Event title"), event.title);
+    await user.selectOptions(screen.getByLabelText("Event category"), event.category);
+    await user.clear(screen.getByLabelText("Event date"));
+    await user.type(screen.getByLabelText("Event date"), event.date);
+    await user.type(screen.getByLabelText("Event location"), event.location);
+    await user.type(screen.getByLabelText("Event description"), event.description);
+    await user.click(screen.getByRole("button", { name: "Add event" }));
+
+    expect(eventMocks.create).toHaveBeenCalledWith({
+      title: event.title,
+      category: event.category,
+      date: event.date,
+      location: event.location,
+      description: event.description,
+    });
+    expect(await screen.findByText(event.title)).not.toBeNull();
+
+    eventMocks.getAll.mockResolvedValue([event]);
+    cleanup();
+    renderInRouter(<StudentDashboard />);
+    await user.click(screen.getByRole("button", { name: /Campus Events/ }));
+    expect(await screen.findByText(event.title)).not.toBeNull();
+    expect(screen.getByText(/Main Hall/)).not.toBeNull();
+  });
+
+  it("lets an administrator publish a gallery post and shows it to students", async () => {
+    const user = userEvent.setup();
+    const post = {
+      id: "gallery-post-1",
+      title: "Robotics team wins",
+      category: "Achievement",
+      date: "2026-10-20",
+      description: "The college team won first place.",
+      imageUrl: "",
+    };
+    galleryMocks.create.mockResolvedValue(post);
+    renderInRouter(<Admin />);
+
+    await user.type(screen.getByPlaceholderText("Admin ID"), "campus-admin");
+    await user.type(screen.getByPlaceholderText("Password"), "valid-password");
+    await user.click(screen.getByRole("button", { name: "Login" }));
+    await user.click(await screen.findByRole("button", { name: /Achievements \/ Gallery/ }));
+    await user.type(screen.getByLabelText("Post title"), post.title);
+    await user.selectOptions(screen.getByLabelText("Post category"), post.category);
+    await user.clear(screen.getByLabelText("Post date"));
+    await user.type(screen.getByLabelText("Post date"), post.date);
+    await user.type(screen.getByLabelText("Post description"), post.description);
+    await user.click(screen.getByRole("button", { name: "Publish post" }));
+
+    expect(galleryMocks.create).toHaveBeenCalledWith({
+      title: post.title,
+      category: post.category,
+      date: post.date,
+      description: post.description,
+      imageUrl: "",
+    });
+    expect(await screen.findByText(post.title)).not.toBeNull();
+
+    galleryMocks.getAll.mockResolvedValue([post]);
+    cleanup();
+    renderInRouter(<StudentDashboard />);
+    await user.click(screen.getByRole("button", { name: /Achievements & Gallery/ }));
+    expect(await screen.findByText(post.title)).not.toBeNull();
+    expect(screen.getByText(post.description)).not.toBeNull();
+  });
+
+  it("loads real HOD approval notifications and persists mark-as-read", async () => {
+    const user = userEvent.setup();
+    notificationMocks.getMine.mockResolvedValue([{
+      id: "notification-1",
+      requestId: "hod-request-1",
+      title: "HOD approval request",
+      text: "Alex HOD (HOD-101) requested approval for CSE-AI.",
+      read: false,
+      createdAt: "2026-10-25T10:00:00.000Z",
+    }]);
+    renderInRouter(<Admin />);
+
+    await user.type(screen.getByPlaceholderText("Admin ID"), "campus-admin");
+    await user.type(screen.getByPlaceholderText("Password"), "valid-password");
+    await user.click(screen.getByRole("button", { name: "Login" }));
+    const notificationsNav = screen.getAllByRole("button", { name: /Notifications/ })
+      .find((button) => button.classList.contains("nav-item"));
+    await user.click(notificationsNav);
+
+    expect(await screen.findByText(/Alex HOD \(HOD-101\)/)).not.toBeNull();
+    expect(screen.getByText("New")).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Mark all read" }));
+
+    expect(notificationMocks.markAllRead).toHaveBeenCalledOnce();
+    expect(await screen.findByText("Read")).not.toBeNull();
+  });
+
+  it("shows live branch-eligible placement opportunities to students", async () => {
+    const user = userEvent.setup();
+    placementMocks.getAll.mockResolvedValue([{
+      id: "placement-1",
+      company: "Example Corp",
+      role: "Graduate Engineer",
+      branch: "CSE-AI",
+      location: "Hyderabad",
+      deadline: "2026-12-01",
+      eligibility: "7 CGPA",
+      package: "8 LPA",
+      description: "Apply through the careers portal.",
+      applyLink: "https://example.com/careers",
+    }]);
+    renderInRouter(<StudentDashboard />);
+
+    await user.click(screen.getByRole("button", { name: /Placements/ }));
+    expect(await screen.findByText("Example Corp")).not.toBeNull();
+    expect(screen.getByRole("link", { name: "Apply / View Details" }).getAttribute("href"))
+      .toBe("https://example.com/careers");
+  });
+
+  it("lets an administrator set their display name", async () => {
+    const user = userEvent.setup();
+    renderInRouter(<Admin />);
+
+    await user.type(screen.getByPlaceholderText("Admin ID"), "campus-admin");
+    await user.type(screen.getByPlaceholderText("Password"), "valid-password");
+    await user.click(screen.getByRole("button", { name: "Login" }));
+    await user.click(await screen.findByRole("button", { name: "Admin Profile" }));
+
+    const displayName = screen.getByLabelText("Display name");
+    await user.clear(displayName);
+    await user.type(displayName, "Taylor Admin");
+    await user.click(screen.getByRole("button", { name: "Save name" }));
+
+    expect(await screen.findByRole("heading", { name: "Taylor Admin" })).not.toBeNull();
+    expect((await screen.findByRole("status")).textContent).toBe("Display name updated.");
   });
 
   it("lets an administrator load, unpublish, edit, and delete an announcement", async () => {

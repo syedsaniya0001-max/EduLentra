@@ -1,9 +1,10 @@
 import { useNavigate } from "react-router-dom";
-import { clearAuthSession } from "../../../../../api/authSession";
+import { clearAuthSession, getAuthUser } from "../../../../../api/authSession";
 import "../../styles/hod/HODHeader.css";
 
 function HODHeader() {
   const navigate = useNavigate();
+  const hod = getAuthUser();
 
   return (
     <header className="hod-header">
@@ -11,7 +12,7 @@ function HODHeader() {
       <div className="header-left">
         <div>
           <h1>HOD Portal</h1>
-          <p>Department of CSE - Artificial Intelligence</p>
+          <p>{hod?.department || "Head of Department"}</p>
         </div>
       </div>
 
@@ -36,10 +37,13 @@ function HODHeader() {
           ↪
         </button>
 
-        {/* Notification */}
-        <button className="header-icon-button">
+        <button
+          className="header-icon-button"
+          aria-label="Notifications"
+          title="Notifications"
+          onClick={() => navigate("/hod/notifications")}
+        >
           🔔
-          <span className="notification-dot"></span>
         </button>
 
         {/* Profile */}
@@ -48,11 +52,11 @@ function HODHeader() {
           onClick={() => navigate("/hod-profile")}
         >
           <div className="header-avatar">
-            H
+            {(hod?.name || hod?.username || "H").charAt(0).toUpperCase()}
           </div>
 
           <div className="header-profile-info">
-            <strong>HOD</strong>
+            <strong>{hod?.name || hod?.username || "HOD"}</strong>
             <span>Head of Department</span>
           </div>
 

@@ -66,6 +66,9 @@ test("all four active account roles authenticate with role-specific identifiers 
       return {
         _id: `user-${role}`,
         name: `Test ${role}`,
+        email: `${role}@example.edu`,
+        department: "CSE-AI",
+        branch: "CSE-AI",
         [field]: identifier,
         password: hash,
       };
@@ -80,7 +83,10 @@ test("all four active account roles authenticate with role-specific identifiers 
     assert.equal(result.statusCode, 200);
     assert.equal(result.body.role, role);
     assert.equal(result.body.user.role, role);
+    assert.equal(result.body.user.name, `Test ${role}`);
     assert.equal(result.body.user.username, identifier);
+    assert.equal(result.body.user.email, `${role}@example.edu`);
+    assert.equal(result.body.user.department, "CSE-AI");
     const decodedToken = jwt.verify(result.body.token, process.env.JWT_SECRET);
     assert.equal(decodedToken.userId, `user-${role}`);
     assert.equal(decodedToken.role, role);
@@ -112,6 +118,35 @@ test("login rejects bad passwords and accounts not found by the active-account q
   });
   assert.equal(pendingAccount.statusCode, 401);
   assert.equal(pendingAccount.body.message, "Account not found or not approved");
+});
+
+test("faculty can log in with their registered email address", async () => {
+  process.env.JWT_SECRET = "test-secret-that-is-long-enough-for-auth-tests";
+  const password = "FacultyPassword!2026";
+  const hash = await bcrypt.hash(password, 4);
+  models.faculty.findOne = async (query) => {
+    assert.deepEqual(query, {
+      email: "faculty@example.edu",
+      isActive: true,
+    });
+    return {
+      _id: "faculty-email-user",
+      name: "Email Faculty",
+      facultyId: "FAC-EMAIL-01",
+      email: "faculty@example.edu",
+      password: hash,
+    };
+  };
+
+  const result = await invokeLogin({
+    username: "  FACULTY@EXAMPLE.EDU ",
+    password,
+    role: "faculty",
+  });
+
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.body.user.username, "FAC-EMAIL-01");
+  assert.equal(result.body.user.email, "faculty@example.edu");
 });
 
 test("sample seed safety requires test mode, a dedicated _test database, and distinct passwords", () => {

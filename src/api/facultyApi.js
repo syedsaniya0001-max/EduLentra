@@ -1,20 +1,27 @@
 import { API_BASE_URL } from "./config";
-import { clearAuthSession, storeAuthSession } from "./authSession";
+import {
+  clearAuthSession,
+  getAuthUser,
+  storeAuthSession,
+  updateAuthUser,
+} from "./authSession";
 import { announcementsApi } from "./announcementsApi";
 
 const PROFILE_KEY = "facultyPortalProfile";
 const TOKEN_KEY = "facultyToken";
-const DATA_PREFIX = "facultyPortal:";
 
 const defaultFaculty = {
-  name: "Faculty Member",
+  name: "",
   email: "",
-  department: "Computer Science & Engineering",
-  designation: "Faculty Advisor",
+  department: "",
+  branch: "",
+  subject: "",
+  id: "",
+  designation: "",
+  phone: "",
+  office: "",
   qualification: "",
   experience: "",
-  subjects: [],
-  classes: []
 };
 
 const readJson = (key, fallback) => {
@@ -29,10 +36,6 @@ const readJson = (key, fallback) => {
 const writeJson = (key, value) => {
   localStorage.setItem(key, JSON.stringify(value));
 };
-
-const readRecords = (name) => readJson(`${DATA_PREFIX}${name}`, []);
-const writeRecords = (name, records) =>
-  writeJson(`${DATA_PREFIX}${name}`, records);
 
 async function request(path, options = {}) {
   const token =
@@ -64,6 +67,18 @@ const saveProfile = (profile) => {
   return nextProfile;
 };
 
+const syncFacultySession = (profile) => {
+  if (!getAuthUser()) return;
+  updateAuthUser({
+    username: profile.id,
+    name: profile.name,
+    email: profile.email,
+    department: profile.department,
+    branch: profile.branch,
+    subject: profile.subject,
+  });
+};
+
 export const facultyApi = {
   // Faculty login using backend JWT authentication
   async login(facultyId, password) {
@@ -90,7 +105,7 @@ export const facultyApi = {
       name: result.user?.name || facultyId,
       id: result.user?.id || facultyId,
       fid: facultyId,
-      department: result.user?.department || defaultFaculty.department
+      department: result.user?.department || "",
     });
 
     return {
@@ -143,176 +158,254 @@ export const facultyApi = {
   },
 
   async getProfile() {
-    return this.getCurrentUser();
+    const result = await request("/api/faculty/profile");
+    if (!result.faculty?.id || !result.faculty?.name) {
+      throw new Error("The faculty profile service returned invalid data.");
+    }
+    const profile = saveProfile({
+      ...result.faculty,
+      fid: result.faculty.id,
+    });
+    syncFacultySession(profile);
+    return profile;
   },
 
   async updateProfile(profile) {
-    const current = this.getCurrentUser();
-    const updated = saveProfile({ ...current, ...profile });
+    const result = await request("/api/faculty/profile", {
+      method: "PATCH",
+      body: JSON.stringify({
+        name: profile.name,
+        phone: profile.phone || "",
+        office: profile.office || "",
+        designation: profile.designation || "",
+        qualification: profile.qualification || "",
+        experience: profile.experience || "",
+      }),
+    });
+    if (!result.faculty?.id || !result.faculty?.name) {
+      throw new Error("The faculty profile service returned invalid data.");
+    }
+    const updated = saveProfile({
+      ...result.faculty,
+      fid: result.faculty.id,
+    });
+    syncFacultySession(updated);
     return { faculty: updated };
   },
 
   async changePassword(currentPassword, newPassword) {
-    const faculty = this.getCurrentUser();
-
-    return request("/api/set-password", {
+    return request("/api/faculty/password", {
       method: "PUT",
-      body: JSON.stringify({
-        role: "faculty",
-        id: faculty.fid || faculty.email,
-        currentPassword,
-        newPassword
-      })
+      body: JSON.stringify({ currentPassword, newPassword }),
     });
   },
 
   async getDashboard() {
-    return {};
+    const result = await request("/api/faculty/dashboard");
+    const stats = result.stats;
+    if (
+      !stats ||
+      !Number.isFinite(stats.totalStudents) ||
+      !Number.isFinite(stats.pendingOutpasses) ||
+      !Number.isFinite(stats.activeAssignments) ||
+      !Number.isFinite(stats.totalNotes) ||
+      !(stats.avgAttendance === null || Number.isFinite(stats.avgAttendance)) ||
+      !Array.isArray(result.timetable) ||
+      result.timetable.some(
+        (entry) =>
+          !entry.day ||
+          !entry.startTime ||
+          !entry.endTime ||
+          !entry.section ||
+          !entry.subject
+      ) ||
+      typeof result.timetableConfigured !== "boolean" ||
+      !Array.isArray(result.recentActivities)
+    ) {
+      throw new Error("The faculty dashboard service returned invalid data.");
+    }
+    return result;
   },
 
-  async getStudents(search = "", branch = "All") {
+  async getTimetable() {
+    const result = await request("/api/faculty/timetable");
+    if (!Array.isArray(result.timetable) || !Array.isArray(result.sections)) {
+      throw new Error("The timetable service returned invalid data.");
+    }
+    return result;
+  },
+
+  async createTimetableEntry(entry) {
+    const result = await request("/api/faculty/timetable", {
+      method: "POST",
+      body: JSON.stringify(entry),
+    });
+    if (!result.entry?._id) {
+      throw new Error("The timetable service did not return the saved entry.");
+    }
+    return result.entry;
+  },
+
+  async updateTimetableEntry(id, entry) {
+    const result = await request(`/api/faculty/timetable/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(entry),
+    });
+    if (!result.entry?._id) {
+      throw new Error("The timetable service did not return the updated entry.");
+    }
+    return result.entry;
+  },
+
+  async deleteTimetableEntry(id) {
+    return request(`/api/faculty/timetable/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+  },
+
+  async getStudents(search = "", section = "All") {
     const query = new URLSearchParams();
     if (search) query.set("search", search);
-    if (branch !== "All") query.set("branch", branch);
+    if (section !== "All") query.set("section", section);
     const result = await request(`/api/students?${query.toString()}`);
-    const students = result.students || [];
-
-    return students
+    if (!Array.isArray(result.students) || !Array.isArray(result.sections)) {
+      throw new Error("The student directory returned an invalid response.");
+    }
+    return {
+      sections: result.sections,
+      students: result.students
       .map((student) => ({
         ...student,
         id: student._id,
         rollNumber: student.rollNumber || "",
         branch: student.branch || "",
-      }));
+      })),
+    };
   },
 
   async getOutpasses() {
-    return readRecords("outpasses");
+    const result = await request("/api/faculty/outpasses");
+    if (!Array.isArray(result.outpasses)) {
+      throw new Error("The outpass service returned an invalid response.");
+    }
+    return result.outpasses.map((outpass) => ({
+      ...outpass,
+      id: outpass._id || outpass.id,
+      studentName: outpass.student?.name || "Student",
+      rollNumber: outpass.student?.rollNumber || "",
+      branch: outpass.student?.branch || "",
+      section: outpass.student?.section || "",
+      reason: outpass.reason || "",
+      destination: outpass.destination || "",
+      outDate: outpass.fromDate ? new Date(outpass.fromDate).toLocaleDateString() : "",
+      inDate: outpass.toDate ? new Date(outpass.toDate).toLocaleDateString() : "",
+      facultyRemarks: outpass.reviewRemarks || outpass.rejectionReason || "",
+      status: outpass.status || "PENDING",
+    }));
   },
 
   async approveOutpass(id, remarks) {
-    writeRecords(
-      "outpasses",
-      readRecords("outpasses").map((item) =>
-        item.id === id
-          ? { ...item, status: "Approved", remarks }
-          : item
-      )
-    );
+    const result = await request(`/api/faculty/outpasses/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: "APPROVED",
+        remarks,
+      }),
+    });
+    return result.outpass;
   },
 
   async rejectOutpass(id, remarks) {
-    writeRecords(
-      "outpasses",
-      readRecords("outpasses").map((item) =>
-        item.id === id
-          ? { ...item, status: "Rejected", remarks }
-          : item
-      )
-    );
+    const result = await request(`/api/faculty/outpasses/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: "REJECTED",
+        remarks,
+      }),
+    });
+    return result.outpass;
   },
 
-  async getAttendanceRecords(date, subject, className) {
-    return readRecords("attendance").filter(
-      (record) =>
-        record.date === date &&
-        record.subject === subject &&
-        record.class === className
-    );
+  async getAttendanceRoster(date, section, period) {
+    const query = new URLSearchParams({ date, section, period });
+    const result = await request(`/api/faculty/attendance?${query.toString()}`);
+    if (!Array.isArray(result.students) || !Array.isArray(result.sections)) {
+      throw new Error("The attendance service returned an invalid roster.");
+    }
+    return {
+      branch: result.branch,
+      subject: result.subject,
+      sections: result.sections,
+      students: result.students.map((student) => ({
+        ...student,
+        id: student._id,
+      })),
+    };
   },
 
   async markAttendance(payload) {
-    const records = readRecords("attendance");
-
-    const existingIndex = records.findIndex(
-      (record) =>
-        record.date === payload.date &&
-        record.subject === payload.subject &&
-        record.class === payload.class
-    );
-
-    const nextRecord = {
-      ...payload,
-      id: records[existingIndex]?.id || crypto.randomUUID()
-    };
-
-    if (existingIndex < 0) {
-      records.push(nextRecord);
-    } else {
-      records[existingIndex] = nextRecord;
-    }
-
-    writeRecords("attendance", records);
-    return { message: "Attendance saved on this device." };
+    return request("/api/faculty/attendance", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
   },
 
   async getAssignments() {
-    return readRecords("assignments");
+    const result = await request("/api/faculty/assignments");
+    if (!Array.isArray(result.assignments) || !Array.isArray(result.sections)) {
+      throw new Error("The assignment service returned an invalid response.");
+    }
+    return result;
   },
 
   async createAssignment(assignment) {
-    const records = readRecords("assignments");
-
-    records.push({
-      ...assignment,
-      id: crypto.randomUUID(),
-      submissions: []
+    const result = await request("/api/faculty/assignments", {
+      method: "POST",
+      body: JSON.stringify(assignment),
     });
-
-    writeRecords("assignments", records);
+    return result.assignment;
   },
 
   async gradeSubmission(assignmentId, submissionId, marks, feedback) {
-    const assignments = readRecords("assignments").map((assignment) =>
-      assignment.id === assignmentId
-        ? {
-            ...assignment,
-            submissions: (assignment.submissions || []).map((submission) =>
-              submission.id === submissionId
-                ? { ...submission, marks, feedback, status: "Graded" }
-                : submission
-            )
-          }
-        : assignment
+    const result = await request(
+      `/api/faculty/assignments/${encodeURIComponent(assignmentId)}/submissions/${encodeURIComponent(submissionId)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ marks, feedback }),
+      }
     );
-
-    writeRecords("assignments", assignments);
+    return result.submission;
   },
 
   async getNotes(search = "", subject = "All") {
-    const normalizedSearch = search.toLowerCase();
-
-    return readRecords("notes").filter((note) => {
-      const matchesSubject =
-        subject === "All" || note.subject === subject;
-
-      const matchesSearch =
-        !normalizedSearch ||
-        `${note.title} ${note.description || ""}`
-          .toLowerCase()
-          .includes(normalizedSearch);
-
-      return matchesSubject && matchesSearch;
-    });
+    const query = new URLSearchParams({ search, subject });
+    const result = await request(`/api/faculty/materials?${query.toString()}`);
+    if (!Array.isArray(result.materials) || !Array.isArray(result.sections)) {
+      throw new Error("The study material service returned an invalid response.");
+    }
+    return {
+      branch: result.branch,
+      subject: result.subject,
+      sections: result.sections,
+      materials: result.materials.map((material) => ({
+        ...material,
+        id: material._id || material.id,
+      })),
+    };
   },
 
   async uploadNote(note) {
-    const records = readRecords("notes");
-
-    records.push({
-      ...note,
-      id: crypto.randomUUID(),
-      uploadedAt: new Date().toISOString()
+    const result = await request("/api/faculty/materials", {
+      method: "POST",
+      body: JSON.stringify(note),
     });
-
-    writeRecords("notes", records);
+    return result.material;
   },
 
   async deleteNote(id) {
-    writeRecords(
-      "notes",
-      readRecords("notes").filter((note) => note.id !== id)
-    );
+    return request(`/api/faculty/materials/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
   },
 
   async getAnnouncements() {

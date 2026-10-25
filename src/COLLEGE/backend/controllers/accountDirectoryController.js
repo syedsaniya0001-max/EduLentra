@@ -8,12 +8,19 @@ const getStudentDirectory = async (req, res) => {
   try {
     const filter = { isActive: true };
     const branch = typeof req.query.branch === "string" ? req.query.branch.trim() : "";
+    const section = typeof req.query.section === "string" ? req.query.section.trim() : "";
     const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
 
     if (req.user.role === "hod") {
       filter.branch = req.reviewer.department;
+    } else if (req.user.role === "faculty") {
+      filter.branch = req.reviewer.branch || req.reviewer.department;
     } else if (branch && branch !== "All") {
       filter.branch = branch;
+    }
+
+    if (section && section !== "All") {
+      filter.section = section;
     }
 
     if (search) {
@@ -25,12 +32,28 @@ const getStudentDirectory = async (req, res) => {
       ];
     }
 
-    const students = await Student.find(filter)
+    const [students, sections] = await Promise.all([
+      Student.find(filter)
       .select("_id name rollNumber email branch section entryType isActive createdAt")
       .sort({ createdAt: -1 })
-      .lean();
+      .lean(),
+      filter.branch
+        ? Student.distinct("section", {
+            branch: filter.branch,
+            isActive: true,
+            section: { $nin: ["", null] },
+          })
+        : Student.distinct("section", {
+            isActive: true,
+            section: { $nin: ["", null] },
+          }),
+    ]);
 
-    return res.status(200).json({ count: students.length, students });
+    return res.status(200).json({
+      count: students.length,
+      students,
+      sections: sections.sort((left, right) => left.localeCompare(right)),
+    });
   } catch (error) {
     console.error("Student directory lookup failed:", error.name || "Error");
     return res.status(500).json({ message: "Unable to load student accounts." });

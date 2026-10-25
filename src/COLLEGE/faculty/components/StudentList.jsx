@@ -5,20 +5,24 @@ export default function StudentList() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [branch, setBranch] = useState("All");
+  const [section, setSection] = useState("All");
+  const [sections, setSections] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [error, setError] = useState("");
 
   const fetchStudents = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await facultyApi.getStudents(search, branch);
-      setStudents(data);
-    } catch (err) {
-      console.error("Failed to load students:", err);
+      setError("");
+      const data = await facultyApi.getStudents(search, section);
+      setStudents(data.students);
+      setSections(data.sections);
+    } catch (loadError) {
+      setError(loadError.message || "Failed to load students.");
     } finally {
       setLoading(false);
     }
-  }, [branch, search]);
+  }, [search, section]);
 
   useEffect(() => {
     fetchStudents();
@@ -51,17 +55,19 @@ export default function StudentList() {
 
         <select
           className="fac-select-input"
-          value={branch}
-          onChange={(e) => setBranch(e.target.value)}
+          aria-label="Filter students by section"
+          value={section}
+          onChange={(e) => setSection(e.target.value)}
         >
-          <option value="All">All Branches</option>
-          <option value="CSE">CSE</option>
-          <option value="AIML">AIML</option>
-          <option value="A">Section A</option>
-          <option value="B">Section B</option>
+          <option value="All">All Sections</option>
+          {sections.map((item) => (
+            <option key={item} value={item}>{item}</option>
+          ))}
         </select>
 
       </div>
+
+      {error && <p role="alert" style={{ color: "#b91c1c" }}>{error}</p>}
 
       {/* Students Table */}
       <div className="fac-card" style={{ padding: 0, overflow: "hidden" }}>

@@ -19,7 +19,13 @@ const requireActiveAccount = async (req, res, next) => {
     const reviewer = await Reviewer.findOne({
       _id: req.user.userId,
       isActive: true,
-    }).select(role === "hod" || role === "faculty" ? "_id department" : "_id");
+    }).select(
+      role === "faculty"
+        ? "_id department branch"
+        : role === "hod"
+          ? "_id department"
+          : "_id"
+    );
 
     if (!reviewer) {
       return res.status(403).json({

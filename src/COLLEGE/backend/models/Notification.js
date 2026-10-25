@@ -14,6 +14,23 @@ const notificationSchema = new mongoose.Schema(
       enum: ["Student", "Faculty", "HOD", "Admin"],
     },
 
+    sourceRequest: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "HODRequest",
+      default: null,
+    },
+
+    sourceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+
+    sourceModel: {
+      type: String,
+      enum: ["FacultyRequest", "Complaint", "Suggestion", "OutpassRequest"],
+      default: null,
+    },
+
     title: {
       type: String,
       required: true,
@@ -56,5 +73,19 @@ notificationSchema.index({
   isRead: 1,
   createdAt: -1,
 });
+notificationSchema.index(
+  { recipient: 1, sourceRequest: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { sourceRequest: { $type: "objectId" } },
+  }
+);
+notificationSchema.index(
+  { recipient: 1, recipientModel: 1, sourceModel: 1, sourceId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { sourceId: { $type: "objectId" } },
+  }
+);
 
 module.exports = mongoose.model("Notification", notificationSchema);

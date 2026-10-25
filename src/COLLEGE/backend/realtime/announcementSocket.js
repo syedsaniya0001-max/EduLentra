@@ -3,10 +3,10 @@ const jwt = require("jsonwebtoken");
 
 const allowedRoles = new Set(["admin", "hod", "faculty", "student"]);
 
-const attachAnnouncementSocket = (httpServer, app) => {
+const attachAnnouncementSocket = (httpServer, app, allowedOrigins) => {
   const io = new Server(httpServer, {
     cors: {
-      origin: true,
+      origin: allowedOrigins,
       methods: ["GET", "POST"],
     },
   });

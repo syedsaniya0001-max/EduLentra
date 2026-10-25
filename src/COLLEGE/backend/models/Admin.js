@@ -2,6 +2,13 @@ const mongoose = require("mongoose");
 
 const adminSchema = new mongoose.Schema(
   {
+    name: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+      default: "",
+    },
+
     username: {
       type: String,
       required: true,

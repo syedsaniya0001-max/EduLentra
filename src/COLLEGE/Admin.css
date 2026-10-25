@@ -665,6 +665,21 @@
   text-decoration: underline;
 }
 
+.notification-popover > button {
+  display: block;
+  width: 100%;
+  padding: 9px;
+  border-top: 1px solid #f1f5f9;
+  color: #64748b;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.notification-popover > button.unread {
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
 .notification-popover p {
   font-size: 13px;
 

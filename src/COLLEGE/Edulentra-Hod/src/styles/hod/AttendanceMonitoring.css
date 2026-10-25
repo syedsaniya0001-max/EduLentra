@@ -275,6 +275,11 @@
   color: #dc2626;
 }
 
+.attendance-status.critical {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 /* View */
 
 .attendance-view-btn {

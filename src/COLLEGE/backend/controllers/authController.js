@@ -46,7 +46,11 @@ const login = async (req, res) => {
       query = { rollNumber: identifier, isActive: true };
     } else if (role === "faculty") {
       userModel = Faculty;
-      query = { facultyId: identifier, isActive: true };
+      query = {
+        [identifier.includes("@") ? "email" : "facultyId"]:
+          identifier.includes("@") ? identifier.toLowerCase() : identifier,
+        isActive: true,
+      };
     } else if (role === "hod") {
       userModel = HOD;
       query = { hodId: identifier, isActive: true };
@@ -79,8 +83,17 @@ const login = async (req, res) => {
       role,
       user: {
         id: user._id,
-        name: user.name || user.username,
+        name:
+          user.name ||
+          user.fullName ||
+          user.username ||
+          user.rollNumber ||
+          user.facultyId ||
+          user.hodId,
         username: user.username || user.rollNumber || user.facultyId || user.hodId,
+        rollNumber: user.rollNumber || undefined,
+        email: user.email || "",
+        department: user.department || user.branch || "",
         role,
       },
     });

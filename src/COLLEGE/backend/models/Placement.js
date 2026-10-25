@@ -32,6 +32,28 @@ const placementSchema = new mongoose.Schema(
       trim: true,
     },
 
+    location: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 160,
+    },
+
+    applyLink: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 2048,
+    },
+
+    branch: {
+      type: String,
+      required: true,
+      trim: true,
+      default: "All",
+      index: true,
+    },
+
     applicationDeadline: {
       type: Date,
       required: true,

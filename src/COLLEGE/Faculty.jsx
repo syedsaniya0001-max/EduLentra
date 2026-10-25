@@ -209,7 +209,7 @@ function Faculty() {
                 <form onSubmit={handleLogin}>
                   <input
                     type="text"
-                    placeholder="Faculty ID"
+                    placeholder="Faculty ID or Email"
                     autoComplete="username"
                     value={loginData.email}
                     required

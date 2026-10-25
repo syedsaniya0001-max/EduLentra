@@ -1,9 +1,11 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { getAuthUser } from "../../../../../api/authSession";
 import "../../styles/hod/HODSidebar.css";
 
 function HODSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const hod = getAuthUser();
 
   const menuItems = [
     {
@@ -40,6 +42,11 @@ function HODSidebar() {
       label: "Complaints",
       path: "/hod/complaints",
       icon: "💬",
+    },
+    {
+      label: "Suggestions",
+      path: "/hod/suggestions",
+      icon: "💡",
     },
     {
       label: "Announcements",
@@ -109,11 +116,11 @@ function HODSidebar() {
           onClick={() => navigate("/hod-profile")}
         >
           <div className="hod-sidebar-avatar">
-            H
+            {(hod?.name || hod?.username || "H").charAt(0).toUpperCase()}
           </div>
 
           <div className="hod-sidebar-profile-text">
-            <strong>HOD</strong>
+            <strong>{hod?.name || hod?.username || "HOD"}</strong>
             <span>Head of Department</span>
           </div>
         </button>

@@ -40,6 +40,41 @@ const facultySchema = new mongoose.Schema(
       default: "",
     },
 
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: 30,
+      default: "",
+    },
+
+    office: {
+      type: String,
+      trim: true,
+      maxlength: 120,
+      default: "",
+    },
+
+    designation: {
+      type: String,
+      trim: true,
+      maxlength: 100,
+      default: "",
+    },
+
+    qualification: {
+      type: String,
+      trim: true,
+      maxlength: 120,
+      default: "",
+    },
+
+    experience: {
+      type: String,
+      trim: true,
+      maxlength: 80,
+      default: "",
+    },
+
     image: {
       type: String,
       default: "",

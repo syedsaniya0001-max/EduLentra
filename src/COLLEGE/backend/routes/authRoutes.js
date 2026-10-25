@@ -6,7 +6,10 @@ const {
   requestPasswordReset,
   resetPassword,
 } = require("../controllers/passwordResetController");
-const { updateAdminEmail } = require("../controllers/adminAccountController");
+const {
+  updateAdminName,
+  updateAdminEmail,
+} = require("../controllers/adminAccountController");
 const {
   protect,
   authorizeRoles,
@@ -38,5 +41,6 @@ router.post("/login", login);
 router.post("/forgot-password", passwordResetRequestLimiter, requestPasswordReset);
 router.post("/reset-password", passwordResetLimiter, resetPassword);
 router.put("/admin/email", protect, authorizeRoles("admin"), updateAdminEmail);
+router.put("/admin/name", protect, authorizeRoles("admin"), updateAdminName);
 
 module.exports = router;

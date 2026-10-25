@@ -1,6 +1,26 @@
 const TOKEN_KEY = "edulentraToken";
 const USER_KEY = "edulentraUser";
 
+export function getAuthUser() {
+  try {
+    const user = JSON.parse(sessionStorage.getItem(USER_KEY) || "null");
+    return user && typeof user === "object" ? user : null;
+  } catch {
+    return null;
+  }
+}
+
+export function updateAuthUser(updates) {
+  const current = getAuthUser();
+  if (!current) {
+    throw new Error("There is no signed-in user profile to update.");
+  }
+
+  const updated = { ...current, ...updates };
+  sessionStorage.setItem(USER_KEY, JSON.stringify(updated));
+  return updated;
+}
+
 export function storeAuthSession(result, expectedRole) {
   if (
     !result?.token ||

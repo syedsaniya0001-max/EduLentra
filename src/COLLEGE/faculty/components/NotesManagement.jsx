@@ -6,18 +6,20 @@ export default function NotesManagement() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("All");
+  const [sections, setSections] = useState([]);
+  const [branch, setBranch] = useState("");
+  const [facultySubject, setFacultySubject] = useState("");
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [alertMsg, setAlertMsg] = useState(null);
 
   // Form State
   const [formData, setFormData] = useState({
     title: "",
-    subject: "Data Structures & Algorithms",
-    class: "CSE - 3rd Year (Section A)",
+    section: "*",
     unit: "Unit 1",
     description: "",
     fileUrl: "",
-    fileName: ""
+    fileName: "",
   });
 
   useEffect(() => {
@@ -27,10 +29,13 @@ export default function NotesManagement() {
   const fetchNotes = async () => {
     try {
       setLoading(true);
-      const data = await facultyApi.getNotes(search, selectedSubject);
-      setNotes(data);
+      const result = await facultyApi.getNotes(search, selectedSubject);
+      setNotes(result.materials);
+      setSections(result.sections);
+      setBranch(result.branch);
+      setFacultySubject(result.subject);
     } catch (err) {
-      console.error("Notes error:", err);
+      setAlertMsg({ type: "error", text: err.message || "Unable to load study materials." });
     } finally {
       setLoading(false);
     }
@@ -39,32 +44,38 @@ export default function NotesManagement() {
   const handleUpload = async (e) => {
     e.preventDefault();
     if (!formData.title.trim()) {
-      alert("Please enter a note title.");
+      setAlertMsg({ type: "error", text: "Enter a material title." });
+      return;
+    }
+    if (!formData.fileUrl.trim() || !formData.fileName.trim()) {
+      setAlertMsg({ type: "error", text: "Enter the document link and file name before publishing." });
       return;
     }
 
     try {
       await facultyApi.uploadNote({
-        ...formData,
-        fileName: formData.fileName || `${formData.title.replace(/\s+/g, "_")}.pdf`,
-        fileSize: "2.5 MB"
+        title: formData.title.trim(),
+        section: formData.section,
+        unit: formData.unit,
+        description: formData.description.trim(),
+        fileUrl: formData.fileUrl.trim(),
+        fileName: formData.fileName.trim(),
       });
 
       setAlertMsg({ type: "success", text: "Lecture note uploaded and shared with students!" });
       setShowUploadModal(false);
       setFormData({
         title: "",
-        subject: "Data Structures & Algorithms",
-        class: "CSE - 3rd Year (Section A)",
+        section: "*",
         unit: "Unit 1",
         description: "",
         fileUrl: "",
-        fileName: ""
+        fileName: "",
       });
-      fetchNotes();
+      await fetchNotes();
       setTimeout(() => setAlertMsg(null), 4000);
     } catch (err) {
-      setAlertMsg({ type: "error", text: "Failed to upload note." });
+      setAlertMsg({ type: "error", text: err.message || "Failed to publish study material." });
     }
   };
 
@@ -77,7 +88,7 @@ export default function NotesManagement() {
       fetchNotes();
       setTimeout(() => setAlertMsg(null), 3000);
     } catch (err) {
-      alert("Failed to delete note.");
+      setAlertMsg({ type: "error", text: err.message || "Failed to delete study material." });
     }
   };
 
@@ -97,7 +108,7 @@ export default function NotesManagement() {
       </div>
 
       {alertMsg && (
-        <div className={`fac-alert-banner ${alertMsg.type}`}>
+        <div className={`fac-alert-banner ${alertMsg.type}`} role={alertMsg.type === "error" ? "alert" : "status"}>
           <span>{alertMsg.text}</span>
           <button
             onClick={() => setAlertMsg(null)}
@@ -124,9 +135,7 @@ export default function NotesManagement() {
           onChange={(e) => setSelectedSubject(e.target.value)}
         >
           <option value="All">All Subjects</option>
-          <option value="Data Structures & Algorithms">Data Structures & Algorithms</option>
-          <option value="Design and Analysis of Algorithms">Design & Analysis of Algorithms</option>
-          <option value="Machine Learning">Machine Learning</option>
+          {facultySubject && <option value={facultySubject}>{facultySubject}</option>}
         </select>
       </div>
 
@@ -154,7 +163,7 @@ export default function NotesManagement() {
                 </h3>
 
                 <div style={{ fontSize: "12px", color: "#2563eb", fontWeight: 600, marginBottom: "8px" }}>
-                  {note.subject} • {note.class}
+                  {note.subject} • {note.branch} • {note.section === "*" ? "All sections" : note.section}
                 </div>
 
                 <p style={{ fontSize: "13px", color: "#64748b", lineHeight: 1.5, margin: 0 }}>
@@ -174,7 +183,7 @@ export default function NotesManagement() {
               >
                 <div style={{ fontSize: "12px", color: "#64748b", display: "flex", alignItems: "center", gap: "6px" }}>
                   <span>📄 {note.fileName}</span>
-                  <span>({note.fileSize})</span>
+                  {note.fileSize && <span>({note.fileSize})</span>}
                 </div>
 
                 <div style={{ display: "flex", gap: "8px" }}>
@@ -227,18 +236,33 @@ export default function NotesManagement() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div className="fac-form-group">
-                  <label className="fac-form-label">Subject *</label>
-                  <select
-                    className="fac-form-select"
-                    value={formData.subject}
-                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                  >
-                    <option value="Data Structures & Algorithms">Data Structures & Algorithms</option>
-                    <option value="Design and Analysis of Algorithms">Design & Analysis of Algorithms</option>
-                    <option value="Machine Learning">Machine Learning</option>
-                  </select>
+                  <label className="fac-form-label">Branch</label>
+                  <input className="fac-form-input" value={branch || "Loading..."} readOnly />
                 </div>
 
+                <div className="fac-form-group">
+                  <label className="fac-form-label">Subject</label>
+                  <input className="fac-form-input" value={facultySubject || "Loading..."} readOnly />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div className="fac-form-group">
+                  <label className="fac-form-label" htmlFor="material-target-section">Target Section</label>
+                  <select
+                    id="material-target-section"
+                    className="fac-form-select"
+                    value={formData.section}
+                    onChange={(e) => setFormData({ ...formData, section: e.target.value })}
+                  >
+                    <option value="*">All sections</option>
+                    {sections.map((section) => (
+                      <option key={section} value={section}>
+                        {section === "__unassigned__" ? "Unassigned section" : `Section ${section}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div className="fac-form-group">
                   <label className="fac-form-label">Unit / Module</label>
                   <select
@@ -256,19 +280,6 @@ export default function NotesManagement() {
               </div>
 
               <div className="fac-form-group">
-                <label className="fac-form-label">Target Class</label>
-                <select
-                  className="fac-form-select"
-                  value={formData.class}
-                  onChange={(e) => setFormData({ ...formData, class: e.target.value })}
-                >
-                  <option value="CSE - 3rd Year (Section A)">CSE - 3rd Year (Section A)</option>
-                  <option value="CSE - 2nd Year (Section B)">CSE - 2nd Year (Section B)</option>
-                  <option value="AIML - 3rd Year">AIML - 3rd Year</option>
-                </select>
-              </div>
-
-              <div className="fac-form-group">
                 <label className="fac-form-label">Notes Description & Topic Summary</label>
                 <textarea
                   className="fac-form-textarea"
@@ -279,17 +290,33 @@ export default function NotesManagement() {
               </div>
 
               <div className="fac-form-group">
-                <label className="fac-form-label">File Attachment / PDF Link</label>
+                <label className="fac-form-label" htmlFor="material-document-url">Document URL *</label>
                 <input
-                  type="text"
-                  placeholder="Paste direct PDF URL or document drive link..."
+                  id="material-document-url"
+                  type="url"
+                  required
+                  placeholder="https://..."
                   className="fac-form-input"
                   value={formData.fileUrl}
-                  onChange={(e) => setFormData({ ...formData, fileUrl: e.target.value, fileName: "Uploaded_Module.pdf" })}
+                  onChange={(e) => setFormData({ ...formData, fileUrl: e.target.value })}
                 />
                 <span style={{ fontSize: "11.5px", color: "#64748b", marginTop: "4px", display: "block" }}>
-                  Leave blank to use default official Edulentra PDF format.
+                  Provide an accessible HTTP/HTTPS link to a PDF or document. The portal stores and shares the link.
                 </span>
+              </div>
+
+              <div className="fac-form-group">
+                <label className="fac-form-label" htmlFor="material-file-name">Document file name *</label>
+                <input
+                  id="material-file-name"
+                  type="text"
+                  required
+                  maxLength={255}
+                  placeholder="e.g. Unit-1-Notes.pdf"
+                  className="fac-form-input"
+                  value={formData.fileName}
+                  onChange={(e) => setFormData({ ...formData, fileName: e.target.value })}
+                />
               </div>
 
               <div className="fac-btn-group">

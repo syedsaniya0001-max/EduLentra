@@ -4,12 +4,21 @@ import "./Admin.css";
 import PortalBackButton from "./PortalBackButton";
 import { API_BASE_URL } from "../api/config";
 import { roleApprovalApi } from "../api/roleApprovalApi";
-import { clearAuthSession, storeAuthSession } from "../api/authSession";
+import {
+  clearAuthSession,
+  getAuthUser,
+  storeAuthSession,
+  updateAuthUser,
+} from "../api/authSession";
 import {
   announcementAudienceLabel,
   announcementsApi,
   toLocalDateTime,
 } from "../api/announcementsApi";
+import { placementsApi } from "../api/placementsApi";
+import { eventsApi } from "../api/eventsApi";
+import { galleryApi } from "../api/galleryApi";
+import { notificationsApi } from "../api/notificationsApi";
 
 const BRANCHES = [
   "ECE",
@@ -61,24 +70,6 @@ function getGreeting() {
 
 const contentCategories = ["Academic", "Achievement", "Cultural", "Sports", "Other"];
 
-const readAdminItems = (key) => {
-  try {
-    const savedItems = localStorage.getItem(key);
-    const parsedItems = savedItems ? JSON.parse(savedItems) : [];
-    return Array.isArray(parsedItems) ? parsedItems : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveAdminItems = (key, items) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(items));
-  } catch (error) {
-    console.error(`Unable to save ${key}:`, error);
-  }
-};
-
 const createAchievementDraft = () => ({
   title: "",
   category: "Academic",
@@ -121,6 +112,8 @@ const createPlacementDraft = () => ({
   package: "",
   deadline: new Date().toISOString().slice(0, 10),
   description: "",
+  eligibility: "",
+  applyLink: "",
 });
 
 function StatCard({ icon, title, value }) {
@@ -139,11 +132,18 @@ function StatCard({ icon, title, value }) {
 function Admin() {
   const navigate = useNavigate();
   const [loggedIn, setLoggedIn] = useState(false);
-
   const [adminId, setAdminId] = useState("");
+  const [adminUser, setAdminUser] = useState(getAuthUser);
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [adminNameDraft, setAdminNameDraft] = useState(
+    () => getAuthUser()?.name || ""
+  );
+  const [isSavingAdminName, setIsSavingAdminName] = useState(false);
+  const [adminProfileMessage, setAdminProfileMessage] = useState("");
+  const adminDisplayName =
+    adminUser?.name || adminUser?.username || adminId || "Admin";
 
   const [activeSection, setActiveSection] = useState("Dashboard");
   const [hasSectionHistory, setHasSectionHistory] = useState(false);
@@ -160,17 +160,25 @@ function Admin() {
   const [directoryError, setDirectoryError] = useState("");
 
   const [showNotifications, setShowNotifications] = useState(false);
-  const [achievementPosts, setAchievementPosts] = useState(() =>
-    readAdminItems("adminAchievementPosts")
-  );
+  const [achievementPosts, setAchievementPosts] = useState([]);
   const [achievementDraft, setAchievementDraft] = useState(createAchievementDraft);
   const [achievementSearch, setAchievementSearch] = useState("");
   const [achievementCategory, setAchievementCategory] = useState("All");
-  const [events, setEvents] = useState(() => readAdminItems("adminEvents"));
+  const [isLoadingAchievementPosts, setIsLoadingAchievementPosts] = useState(false);
+  const [isSavingAchievement, setIsSavingAchievement] = useState(false);
+  const [deletingAchievementId, setDeletingAchievementId] = useState("");
+  const [achievementError, setAchievementError] = useState("");
+  const [achievementMessage, setAchievementMessage] = useState("");
+  const [events, setEvents] = useState([]);
   const [eventDraft, setEventDraft] = useState(createEventDraft);
   const [eventSearch, setEventSearch] = useState("");
   const [eventCategory, setEventCategory] = useState("All");
   const [eventDateFilter, setEventDateFilter] = useState("All");
+  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+  const [isSavingEvent, setIsSavingEvent] = useState(false);
+  const [deletingEventId, setDeletingEventId] = useState("");
+  const [eventError, setEventError] = useState("");
+  const [eventMessage, setEventMessage] = useState("");
   const [announcements, setAnnouncements] = useState([]);
   const [announcementDraft, setAnnouncementDraft] = useState(createAnnouncementDraft);
   const [announcementSearch, setAnnouncementSearch] = useState("");
@@ -182,11 +190,16 @@ function Admin() {
   const [announcementMessage, setAnnouncementMessage] = useState("");
   const [isSavingAnnouncement, setIsSavingAnnouncement] = useState(false);
   const [deletingAnnouncementId, setDeletingAnnouncementId] = useState("");
-  const [placements, setPlacements] = useState(() => readAdminItems("adminPlacements"));
+  const [placements, setPlacements] = useState([]);
   const [placementDraft, setPlacementDraft] = useState(createPlacementDraft);
   const [placementSearch, setPlacementSearch] = useState("");
   const [placementBranch, setPlacementBranch] = useState("All");
   const [placementStatus, setPlacementStatus] = useState("All");
+  const [isLoadingPlacements, setIsLoadingPlacements] = useState(false);
+  const [isSavingPlacement, setIsSavingPlacement] = useState(false);
+  const [placementError, setPlacementError] = useState("");
+  const [placementMessage, setPlacementMessage] = useState("");
+  const [deletingPlacementId, setDeletingPlacementId] = useState("");
 
   const [requests, setRequests] = useState([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
@@ -194,23 +207,10 @@ function Admin() {
   const [requestError, setRequestError] = useState("");
   const [requestMessage, setRequestMessage] = useState("");
 
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      text: "2 new HOD requests need review.",
-      read: false,
-    },
-    {
-      id: 2,
-      text: "Placement update received.",
-      read: false,
-    },
-    {
-      id: 3,
-      text: "New event approval request.",
-      read: true,
-    },
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+  const [isMarkingNotificationsRead, setIsMarkingNotificationsRead] = useState(false);
+  const [notificationError, setNotificationError] = useState("");
 
   const totalStudents = students.length;
   const totalFaculty = faculty.length;
@@ -218,6 +218,18 @@ function Admin() {
     counts[student.branch] = (counts[student.branch] || 0) + 1;
     return counts;
   }, {});
+  const branches = useMemo(() => {
+    const discoveredBranches = [
+      ...students.map((student) => student.branch),
+      ...hods.map((hod) => hod.department),
+      ...placements.map((placement) => placement.branch),
+    ]
+      .filter((branch) => typeof branch === "string" && branch.trim())
+      .map((branch) => branch.trim())
+      .filter((branch) => !BRANCHES.includes(branch));
+
+    return [...BRANCHES, ...[...new Set(discoveredBranches)].sort()];
+  }, [hods, placements, students]);
 
   const pendingRequests = requests.filter(
     (request) => request.status === "Pending"
@@ -458,6 +470,102 @@ function Admin() {
     };
   }, [activeSection, loggedIn]);
 
+  useEffect(() => {
+    if (!loggedIn || activeSection !== "Placements") return undefined;
+
+    let cancelled = false;
+    setIsLoadingPlacements(true);
+    setPlacementError("");
+    placementsApi.getAll()
+      .then((items) => {
+        if (!cancelled) setPlacements(items);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setPlacementError(error.message || "Unable to load placements.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingPlacements(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSection, loggedIn]);
+
+  useEffect(() => {
+    if (!loggedIn || activeSection !== "Events") return undefined;
+
+    let cancelled = false;
+    setIsLoadingEvents(true);
+    setEventError("");
+    eventsApi.getAll()
+      .then((items) => {
+        if (!cancelled) setEvents(items);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setEventError(error.message || "Unable to load events.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingEvents(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSection, loggedIn]);
+
+  useEffect(() => {
+    if (!loggedIn || activeSection !== "Achievements / Gallery") return undefined;
+
+    let cancelled = false;
+    setIsLoadingAchievementPosts(true);
+    setAchievementError("");
+    galleryApi.getAll()
+      .then((items) => {
+        if (!cancelled) setAchievementPosts(items);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setAchievementError(error.message || "Unable to load gallery posts.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingAchievementPosts(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSection, loggedIn]);
+
+  useEffect(() => {
+    if (!loggedIn) return undefined;
+
+    let cancelled = false;
+    setIsLoadingNotifications(true);
+    setNotificationError("");
+    notificationsApi.getMine()
+      .then((items) => {
+        if (!cancelled) setNotifications(items);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setNotificationError(error.message || "Unable to load notifications.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingNotifications(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loggedIn]);
+
   const handleLogin = async (event) => {
     event.preventDefault();
     if (!adminId.trim() || !password || isAuthenticating) return;
@@ -480,6 +588,8 @@ function Admin() {
       }
 
       storeAuthSession(result, "admin");
+      setAdminUser(result.user);
+      setAdminNameDraft(result.user.name || result.user.username || "");
       setLoggedIn(true);
       setLoginError("");
     } catch (error) {
@@ -491,6 +601,7 @@ function Admin() {
 
   const handleLogout = () => {
     setLoggedIn(false);
+    setAdminUser(null);
     setAdminId("");
     setPassword("");
     setLoginError("");
@@ -504,6 +615,48 @@ function Admin() {
     setHasSectionHistory(false);
     setSelectedBranch("All");
     setShowNotifications(false);
+    setAdminProfileMessage("");
+  };
+
+  const handleSaveAdminName = async (event) => {
+    event.preventDefault();
+    const name = adminNameDraft.trim();
+    if (name.length < 2 || name.length > 100) {
+      setAdminProfileMessage("Enter a display name between 2 and 100 characters.");
+      return;
+    }
+
+    const token = sessionStorage.getItem("edulentraToken");
+    if (!token) {
+      setAdminProfileMessage("Your Admin session has expired. Please sign in again.");
+      return;
+    }
+
+    setIsSavingAdminName(true);
+    setAdminProfileMessage("");
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/admin/name`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.message || "Unable to save your display name.");
+      }
+
+      const updatedUser = updateAuthUser({ name: result.name || name });
+      setAdminUser(updatedUser);
+      setAdminNameDraft(updatedUser.name);
+      setAdminProfileMessage("Display name updated.");
+    } catch (error) {
+      setAdminProfileMessage(error.message || "Unable to save your display name.");
+    } finally {
+      setIsSavingAdminName(false);
+    }
   };
 
   const openSection = (section) => {
@@ -544,51 +697,108 @@ function Admin() {
     }
   };
 
-  const markAllNotificationsRead = () => {
-    setNotifications((currentNotifications) =>
-      currentNotifications.map((notification) => ({
-        ...notification,
-        read: true,
-      }))
-    );
+  const markAllNotificationsRead = async () => {
+    if (isMarkingNotificationsRead || unreadNotifications === 0) return;
+    setIsMarkingNotificationsRead(true);
+    setNotificationError("");
+    try {
+      await notificationsApi.markAllRead();
+      setNotifications((currentNotifications) =>
+        currentNotifications.map((notification) => ({ ...notification, read: true }))
+      );
+    } catch (error) {
+      setNotificationError(error.message || "Unable to update notifications.");
+    } finally {
+      setIsMarkingNotificationsRead(false);
+    }
   };
 
-  const addAchievementPost = (event) => {
+  const addAchievementPost = async (event) => {
     event.preventDefault();
-    if (!achievementDraft.title.trim() || !achievementDraft.description.trim()) return;
+    if (
+      !achievementDraft.title.trim() ||
+      !achievementDraft.description.trim() ||
+      isSavingAchievement
+    ) return;
 
-    const nextPosts = [
-      { ...achievementDraft, id: `${Date.now()}`, title: achievementDraft.title.trim() },
-      ...achievementPosts,
-    ];
-    setAchievementPosts(nextPosts);
-    saveAdminItems("adminAchievementPosts", nextPosts);
-    setAchievementDraft(createAchievementDraft());
+    setIsSavingAchievement(true);
+    setAchievementError("");
+    setAchievementMessage("");
+    try {
+      const post = await galleryApi.create({
+        ...achievementDraft,
+        title: achievementDraft.title.trim(),
+        description: achievementDraft.description.trim(),
+      });
+      setAchievementPosts((currentPosts) => [post, ...currentPosts]);
+      setAchievementDraft(createAchievementDraft());
+      setAchievementMessage("Gallery post published.");
+    } catch (error) {
+      setAchievementError(error.message || "Unable to publish this gallery post.");
+    } finally {
+      setIsSavingAchievement(false);
+    }
   };
 
-  const deleteAchievementPost = (id) => {
-    const nextPosts = achievementPosts.filter((post) => post.id !== id);
-    setAchievementPosts(nextPosts);
-    saveAdminItems("adminAchievementPosts", nextPosts);
+  const deleteAchievementPost = async (id) => {
+    setDeletingAchievementId(id);
+    setAchievementError("");
+    setAchievementMessage("");
+    try {
+      await galleryApi.remove(id);
+      setAchievementPosts((currentPosts) =>
+        currentPosts.filter((post) => post.id !== id)
+      );
+      setAchievementMessage("Gallery post removed.");
+    } catch (error) {
+      setAchievementError(error.message || "Unable to remove this gallery post.");
+    } finally {
+      setDeletingAchievementId("");
+    }
   };
 
-  const addEvent = (event) => {
+  const addEvent = async (event) => {
     event.preventDefault();
-    if (!eventDraft.title.trim() || !eventDraft.location.trim() || !eventDraft.description.trim()) return;
+    if (
+      !eventDraft.title.trim() ||
+      !eventDraft.location.trim() ||
+      !eventDraft.description.trim() ||
+      isSavingEvent
+    ) return;
 
-    const nextEvents = [
-      { ...eventDraft, id: `${Date.now()}`, title: eventDraft.title.trim() },
-      ...events,
-    ];
-    setEvents(nextEvents);
-    saveAdminItems("adminEvents", nextEvents);
-    setEventDraft(createEventDraft());
+    setIsSavingEvent(true);
+    setEventError("");
+    setEventMessage("");
+    try {
+      const savedEvent = await eventsApi.create({
+        ...eventDraft,
+        title: eventDraft.title.trim(),
+        location: eventDraft.location.trim(),
+        description: eventDraft.description.trim(),
+      });
+      setEvents((currentEvents) => [savedEvent, ...currentEvents]);
+      setEventDraft(createEventDraft());
+      setEventMessage("Event published.");
+    } catch (error) {
+      setEventError(error.message || "Unable to publish this event.");
+    } finally {
+      setIsSavingEvent(false);
+    }
   };
 
-  const deleteEvent = (id) => {
-    const nextEvents = events.filter((event) => event.id !== id);
-    setEvents(nextEvents);
-    saveAdminItems("adminEvents", nextEvents);
+  const deleteEvent = async (id) => {
+    setDeletingEventId(id);
+    setEventError("");
+    setEventMessage("");
+    try {
+      await eventsApi.remove(id);
+      setEvents((currentEvents) => currentEvents.filter((event) => event.id !== id));
+      setEventMessage("Event removed.");
+    } catch (error) {
+      setEventError(error.message || "Unable to remove this event.");
+    } finally {
+      setDeletingEventId("");
+    }
   };
 
   const addAnnouncement = async (event) => {
@@ -685,23 +895,46 @@ function Admin() {
     setAnnouncementMessage("");
   };
 
-  const addPlacement = (event) => {
+  const addPlacement = async (event) => {
     event.preventDefault();
-    if (!placementDraft.company.trim() || !placementDraft.role.trim() || !placementDraft.description.trim()) return;
+    if (
+      !placementDraft.company.trim() ||
+      !placementDraft.role.trim() ||
+      !placementDraft.location.trim() ||
+      !placementDraft.description.trim()
+    ) {
+      setPlacementError("Complete all required placement details.");
+      return;
+    }
 
-    const nextPlacements = [
-      { ...placementDraft, id: `${Date.now()}`, company: placementDraft.company.trim() },
-      ...placements,
-    ];
-    setPlacements(nextPlacements);
-    saveAdminItems("adminPlacements", nextPlacements);
-    setPlacementDraft(createPlacementDraft());
+    setIsSavingPlacement(true);
+    setPlacementError("");
+    setPlacementMessage("");
+    try {
+      const placement = await placementsApi.create(placementDraft);
+      setPlacements((items) => [placement, ...items]);
+      setPlacementDraft(createPlacementDraft());
+      setPlacementMessage("Placement published successfully.");
+    } catch (error) {
+      setPlacementError(error.message || "Unable to publish placement.");
+    } finally {
+      setIsSavingPlacement(false);
+    }
   };
 
-  const deletePlacement = (id) => {
-    const nextPlacements = placements.filter((placement) => placement.id !== id);
-    setPlacements(nextPlacements);
-    saveAdminItems("adminPlacements", nextPlacements);
+  const deletePlacement = async (id) => {
+    setDeletingPlacementId(id);
+    setPlacementError("");
+    setPlacementMessage("");
+    try {
+      await placementsApi.remove(id);
+      setPlacements((items) => items.filter((placement) => placement.id !== id));
+      setPlacementMessage("Placement removed.");
+    } catch (error) {
+      setPlacementError(error.message || "Unable to remove placement.");
+    } finally {
+      setDeletingPlacementId("");
+    }
   };
 
   /* =========================
@@ -834,7 +1067,7 @@ function Admin() {
               All Branches
             </option>
 
-            {BRANCHES.map((branch) => (
+            {branches.map((branch) => (
               <option
                 key={branch}
                 value={branch}
@@ -846,7 +1079,7 @@ function Admin() {
         </div>
 
         <div className="branch-grid">
-          {BRANCHES.map((branch) => (
+          {branches.map((branch) => (
             <button
               key={branch}
               type="button"
@@ -1015,7 +1248,7 @@ function Admin() {
           All
         </button>
 
-        {BRANCHES.map((branch) => (
+        {branches.map((branch) => (
           <button
             type="button"
             key={branch}
@@ -1283,12 +1516,18 @@ function Admin() {
           type="button"
           className="text-button"
           onClick={markAllNotificationsRead}
+          disabled={isMarkingNotificationsRead || unreadNotifications === 0}
         >
-          Mark all read
+          {isMarkingNotificationsRead ? "Saving..." : "Mark all read"}
         </button>
       </div>
 
-      {notifications.map((notification) => (
+      {notificationError && <p role="alert">{notificationError}</p>}
+      {isLoadingNotifications ? (
+        <p role="status">Loading notifications...</p>
+      ) : notifications.length === 0 ? (
+        <p>No pending HOD approval notifications.</p>
+      ) : notifications.map((notification) => (
         <div
           className={`notification-row ${
             notification.read ? "read" : ""
@@ -1300,6 +1539,14 @@ function Admin() {
           <p>
             {notification.text}
           </p>
+
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => openSection("Requests")}
+          >
+            Review request
+          </button>
 
           <small>
             {notification.read ? "Read" : "New"}
@@ -1316,16 +1563,40 @@ function Admin() {
   const profileContent = (
     <section className="content-card profile-card">
       <div className="profile-avatar">
-        A
+        {adminDisplayName.charAt(0).toUpperCase()}
       </div>
 
       <h2>
-        Administrator
+        {adminDisplayName}
       </h2>
 
       <p>
-        Central Admin Account
+        Admin account
       </p>
+
+      {adminProfileMessage && (
+        <p role={adminProfileMessage.endsWith(".") && adminProfileMessage !== "Display name updated."
+          ? "alert"
+          : "status"}
+        >
+          {adminProfileMessage}
+        </p>
+      )}
+
+      <form onSubmit={handleSaveAdminName}>
+        <label htmlFor="admin-display-name">Display name</label>
+        <input
+          id="admin-display-name"
+          type="text"
+          value={adminNameDraft}
+          onChange={(event) => setAdminNameDraft(event.target.value)}
+          maxLength={100}
+          required
+        />
+        <button type="submit" disabled={isSavingAdminName}>
+          {isSavingAdminName ? "Saving..." : "Save name"}
+        </button>
+      </form>
 
       <div className="profile-details">
         <div>
@@ -1334,7 +1605,7 @@ function Admin() {
           </span>
 
           <strong>
-            ADMIN
+            {adminUser?.username || adminId || "Not provided"}
           </strong>
         </div>
 
@@ -1435,18 +1706,31 @@ function Admin() {
             required
           />
         </div>
-        <button className="admin-submit-button" type="submit">Publish post</button>
+        {achievementError && <p role="alert">{achievementError}</p>}
+        {achievementMessage && <p role="status">{achievementMessage}</p>}
+        <button className="admin-submit-button" type="submit" disabled={isSavingAchievement}>
+          {isSavingAchievement ? "Publishing..." : "Publish post"}
+        </button>
       </form>
 
       <div className="admin-entry-grid">
-        {filteredAchievementPosts.map((post) => (
+        {isLoadingAchievementPosts ? (
+          <p role="status">Loading gallery posts...</p>
+        ) : filteredAchievementPosts.map((post) => (
           <article className="admin-entry-card" key={post.id}>
             {post.imageUrl && <img src={post.imageUrl} alt="" className="admin-entry-image" />}
             <div className="admin-entry-card-content">
               <div className="admin-entry-meta"><span>{post.category}</span><time dateTime={post.date}>{post.date}</time></div>
               <h3>{post.title}</h3>
               <p>{post.description}</p>
-              <button type="button" className="admin-delete-button" onClick={() => deleteAchievementPost(post.id)}>Delete post</button>
+              <button
+                type="button"
+                className="admin-delete-button"
+                onClick={() => deleteAchievementPost(post.id)}
+                disabled={deletingAchievementId === post.id}
+              >
+                {deletingAchievementId === post.id ? "Removing..." : "Delete post"}
+              </button>
             </div>
           </article>
         ))}
@@ -1537,18 +1821,31 @@ function Admin() {
             required
           />
         </div>
-        <button className="admin-submit-button" type="submit">Add event</button>
+        {eventError && <p role="alert">{eventError}</p>}
+        {eventMessage && <p role="status">{eventMessage}</p>}
+        <button className="admin-submit-button" type="submit" disabled={isSavingEvent}>
+          {isSavingEvent ? "Publishing..." : "Add event"}
+        </button>
       </form>
 
       <div className="admin-entry-grid">
-        {filteredEvents.map((event) => (
+        {isLoadingEvents ? (
+          <p role="status">Loading events...</p>
+        ) : filteredEvents.map((event) => (
           <article className="admin-entry-card" key={event.id}>
             <div className="admin-entry-card-content">
               <div className="admin-entry-meta"><span>{event.category}</span><time dateTime={event.date}>{event.date}</time></div>
               <h3>{event.title}</h3>
               <p className="admin-event-location">{event.location}</p>
               <p>{event.description}</p>
-              <button type="button" className="admin-delete-button" onClick={() => deleteEvent(event.id)}>Delete event</button>
+              <button
+                type="button"
+                className="admin-delete-button"
+                onClick={() => deleteEvent(event.id)}
+                disabled={deletingEventId === event.id}
+              >
+                {deletingEventId === event.id ? "Removing..." : "Delete event"}
+              </button>
             </div>
           </article>
         ))}
@@ -1717,7 +2014,7 @@ function Admin() {
           <input className="search-input" type="search" placeholder="Search placements..." value={placementSearch} onChange={(event) => setPlacementSearch(event.target.value)} />
           <select className="filter-select" aria-label="Filter placements by branch" value={placementBranch} onChange={(event) => setPlacementBranch(event.target.value)}>
             <option value="All">All branches</option>
-            {BRANCHES.map((branch) => <option key={branch} value={branch}>{branch}</option>)}
+            {branches.map((branch) => <option key={branch} value={branch}>{branch}</option>)}
           </select>
           <select className="filter-select" aria-label="Filter placements by status" value={placementStatus} onChange={(event) => setPlacementStatus(event.target.value)}>
             <option value="All">All deadlines</option>
@@ -1733,29 +2030,41 @@ function Admin() {
           <input aria-label="Company name" placeholder="Company name" value={placementDraft.company} onChange={(event) => setPlacementDraft({ ...placementDraft, company: event.target.value })} required />
           <input aria-label="Job role" placeholder="Job role" value={placementDraft.role} onChange={(event) => setPlacementDraft({ ...placementDraft, role: event.target.value })} required />
           <select aria-label="Eligible branch" value={placementDraft.branch} onChange={(event) => setPlacementDraft({ ...placementDraft, branch: event.target.value })}>
-            {BRANCHES.map((branch) => <option key={branch} value={branch}>{branch}</option>)}
+            {branches.map((branch) => <option key={branch} value={branch}>{branch}</option>)}
           </select>
           <input aria-label="Placement location" placeholder="Location" value={placementDraft.location} onChange={(event) => setPlacementDraft({ ...placementDraft, location: event.target.value })} required />
           <input aria-label="Package" placeholder="Package (optional)" value={placementDraft.package} onChange={(event) => setPlacementDraft({ ...placementDraft, package: event.target.value })} />
           <input aria-label="Application deadline" type="date" value={placementDraft.deadline} onChange={(event) => setPlacementDraft({ ...placementDraft, deadline: event.target.value })} required />
+          <input aria-label="Eligibility criteria" placeholder="Eligibility criteria (optional)" value={placementDraft.eligibility} onChange={(event) => setPlacementDraft({ ...placementDraft, eligibility: event.target.value })} />
+          <input aria-label="Application link" type="url" placeholder="Application link (optional)" value={placementDraft.applyLink} onChange={(event) => setPlacementDraft({ ...placementDraft, applyLink: event.target.value })} />
           <textarea aria-label="Placement details" placeholder="Role and application details" value={placementDraft.description} onChange={(event) => setPlacementDraft({ ...placementDraft, description: event.target.value })} required />
         </div>
-        <button className="admin-submit-button" type="submit">Publish placement</button>
+        {placementError && <p role="alert">{placementError}</p>}
+        {placementMessage && <p role="status">{placementMessage}</p>}
+        <button className="admin-submit-button" type="submit" disabled={isSavingPlacement}>
+          {isSavingPlacement ? "Publishing..." : "Publish placement"}
+        </button>
       </form>
 
       <div className="admin-entry-grid">
-        {filteredPlacements.map((placement) => (
+        {isLoadingPlacements ? (
+          <p className="admin-empty-state">Loading placements...</p>
+        ) : filteredPlacements.map((placement) => (
           <article className="admin-entry-card" key={placement.id}>
             <div className="admin-entry-card-content">
               <div className="admin-entry-meta"><span>{placement.branch}</span><time dateTime={placement.deadline}>Apply by {placement.deadline}</time></div>
               <h3>{placement.company}</h3>
               <p className="admin-event-location">{placement.role} · {placement.location}{placement.package ? ` · ${placement.package}` : ""}</p>
               <p>{placement.description}</p>
-              <button type="button" className="admin-delete-button" onClick={() => deletePlacement(placement.id)}>Delete placement</button>
+              {placement.eligibility && <p>Eligibility: {placement.eligibility}</p>}
+              {placement.applyLink && <a href={placement.applyLink} target="_blank" rel="noreferrer">Application link</a>}
+              <button type="button" className="admin-delete-button" disabled={deletingPlacementId === placement.id} onClick={() => deletePlacement(placement.id)}>
+                {deletingPlacementId === placement.id ? "Removing..." : "Delete placement"}
+              </button>
             </div>
           </article>
         ))}
-        {filteredPlacements.length === 0 && <p className="admin-empty-state">No placements match your search or filters.</p>}
+        {!isLoadingPlacements && !placementError && filteredPlacements.length === 0 && <p className="admin-empty-state">No placements match your search or filters.</p>}
       </div>
     </section>
   );
@@ -1868,7 +2177,7 @@ function Admin() {
         <header className="dashboard-header">
           <div className="greeting">
             <h1>
-              {getGreeting()}, Admin{" "}
+              {getGreeting()}, {adminDisplayName}{" "}
               <span>👋</span>
             </h1>
 
@@ -1922,23 +2231,34 @@ function Admin() {
                       onClick={
                         markAllNotificationsRead
                       }
+                      disabled={isMarkingNotificationsRead || unreadNotifications === 0}
                     >
-                      Mark read
+                      {isMarkingNotificationsRead ? "Saving..." : "Mark read"}
                     </button>
                   </div>
 
-                  {notifications.map(
+                  {notificationError && <p role="alert">{notificationError}</p>}
+                  {isLoadingNotifications ? (
+                    <p role="status">Loading notifications...</p>
+                  ) : notifications.length === 0 ? (
+                    <p>No pending HOD requests.</p>
+                  ) : notifications.map(
                     (notification) => (
-                      <p
+                      <button
+                        type="button"
                         key={notification.id}
                         className={
                           !notification.read
                             ? "unread"
                             : ""
                         }
+                        onClick={() => {
+                          setShowNotifications(false);
+                          openSection("Requests");
+                        }}
                       >
                         {notification.text}
-                      </p>
+                      </button>
                     )
                   )}
                 </div>
@@ -1954,7 +2274,7 @@ function Admin() {
               }
             >
               <span className="profile-symbol">
-                A
+                {adminDisplayName.charAt(0).toUpperCase()}
               </span>
             </button>
           </div>

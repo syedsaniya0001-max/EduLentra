@@ -1,6 +1,40 @@
 const Admin = require("../models/Admin");
 const { isValidEmail, normalizeEmail } = require("../utils/emailValidation");
 
+const updateAdminName = async (req, res) => {
+  const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+
+  if (name.length < 2 || name.length > 100) {
+    return res.status(400).json({
+      message: "Enter a display name between 2 and 100 characters.",
+    });
+  }
+
+  try {
+    const admin = await Admin.findOne({
+      _id: req.user.userId,
+      isActive: true,
+    });
+
+    if (!admin) {
+      return res.status(404).json({ message: "Admin account not found." });
+    }
+
+    admin.name = name;
+    await admin.save();
+
+    return res.status(200).json({
+      message: "Admin display name updated successfully.",
+      name: admin.name,
+    });
+  } catch (error) {
+    console.error("Admin display name update failed:", error.name || "Error");
+    return res.status(500).json({
+      message: "Unable to update the Admin display name. Please try again later.",
+    });
+  }
+};
+
 const updateAdminEmail = async (req, res) => {
   const email = normalizeEmail(req.body?.email);
 
@@ -42,5 +76,6 @@ const updateAdminEmail = async (req, res) => {
 };
 
 module.exports = {
+  updateAdminName,
   updateAdminEmail,
 };

@@ -13,6 +13,7 @@ import AssignmentManagement from "./components/AssignmentManagement";
 import AnnouncementManagement from "./components/AnnouncementManagement";
 import OutpassApproval from "./components/OutpassApproval";
 import FacultyProfile from "./components/FacultyProfile";
+import TimetableManagement from "./components/TimetableManagement";
 
 export default function FacultyDashboard({ initialTab = "overview", onLogout }) {
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -25,21 +26,29 @@ export default function FacultyDashboard({ initialTab = "overview", onLogout }) 
   const navigate = useNavigate();
 
   useEffect(() => {
+    let isCurrent = true;
+    const loadProfileAndBadges = async () => {
+      try {
+        const prof = await facultyApi.getProfile();
+        if (isCurrent) setFaculty(prof);
+
+        const outpasses = await facultyApi.getOutpasses();
+        if (isCurrent) {
+          const pending = (outpasses || []).filter(
+            (outpass) => String(outpass.status || "").toLowerCase() === "pending"
+          ).length;
+          setPendingOutpasses(pending);
+        }
+      } catch (error) {
+        console.error("Faculty profile and pending request lookup failed:", error);
+      }
+    };
     loadProfileAndBadges();
+
+    return () => {
+      isCurrent = false;
+    };
   }, []);
-
-  const loadProfileAndBadges = async () => {
-    try {
-      const prof = await facultyApi.getProfile();
-      setFaculty(prof);
-
-      const outpasses = await facultyApi.getOutpasses();
-      const pending = (outpasses || []).filter((o) => o.status === "Pending").length;
-      setPendingOutpasses(pending);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const handleTabChange = (tabId) => {
     if (tabId !== activeTab) {
@@ -78,6 +87,7 @@ export default function FacultyDashboard({ initialTab = "overview", onLogout }) 
     { id: "notes", label: "Notes & Materials", icon: "📚" },
     { id: "assignments", label: "Assignments", icon: "📝" },
     { id: "announcements", label: "Announcements", icon: "📢" },
+    { id: "timetable", label: "Weekly Timetable", icon: "🗓️" },
     { id: "outpass", label: "Outpass Approvals", icon: "🎫", badge: pendingOutpasses },
     { id: "profile", label: "Faculty Profile", icon: "👤" }
   ];
@@ -106,7 +116,7 @@ export default function FacultyDashboard({ initialTab = "overview", onLogout }) 
             className="fac-user-avatar"
           />
           <div className="fac-profile-info">
-            <h3>{faculty?.name || "Dr. Faculty"}</h3>
+            <h3>{faculty?.name || faculty?.username || "Faculty"}</h3>
             <p>{faculty?.department || "CSE Department"}</p>
           </div>
         </div>
@@ -182,6 +192,8 @@ export default function FacultyDashboard({ initialTab = "overview", onLogout }) 
           {activeTab === "assignments" && <AssignmentManagement />}
 
           {activeTab === "announcements" && <AnnouncementManagement faculty={faculty} />}
+
+          {activeTab === "timetable" && <TimetableManagement />}
 
           {activeTab === "outpass" && <OutpassApproval />}
 

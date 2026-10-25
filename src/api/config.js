@@ -1,5 +1,8 @@
-const productionApiUrl = "https://lms-backend-01-yn35.onrender.com";
+const configuredApiUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, "");
+
+if (!configuredApiUrl && !import.meta.env.DEV) {
+  throw new Error("Set VITE_API_BASE_URL to the deployed EduLentra API URL.");
+}
 
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.DEV ? "http://localhost:5000" : productionApiUrl);
+  configuredApiUrl || (import.meta.env.DEV ? "http://localhost:5000" : "");

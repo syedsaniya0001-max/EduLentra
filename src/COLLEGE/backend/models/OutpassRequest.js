@@ -38,13 +38,26 @@ const outpassRequestSchema = new mongoose.Schema(
 
     reviewedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Faculty",
+      refPath: "reviewedByModel",
       default: null,
+    },
+
+    reviewedByModel: {
+      type: String,
+      enum: ["Faculty", "HOD"],
+      default: "Faculty",
     },
 
     reviewedAt: {
       type: Date,
       default: null,
+    },
+
+    reviewRemarks: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 1000,
     },
 
     rejectionReason: {

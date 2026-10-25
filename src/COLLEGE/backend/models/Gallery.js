@@ -12,17 +12,26 @@ const gallerySchema = new mongoose.Schema(
       type: String,
       default: "",
       trim: true,
+      maxlength: 5000,
     },
 
     image: {
       type: String,
-      required: true,
+      default: "",
+      trim: true,
+      maxlength: 2048,
     },
 
     category: {
       type: String,
       required: true,
+      enum: ["Academic", "Achievement", "Cultural", "Sports", "Other"],
       trim: true,
+    },
+
+    date: {
+      type: Date,
+      required: true,
     },
 
     event: {
@@ -52,5 +61,7 @@ const gallerySchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+gallerySchema.index({ isActive: 1, date: -1 });
 
 module.exports = mongoose.model("Gallery", gallerySchema);

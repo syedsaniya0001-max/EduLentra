@@ -1378,6 +1378,12 @@
     color: #ea580c;
 }
 
+.task-error {
+    margin-top: 12px;
+    color: #b91c1c;
+    font-size: 13px;
+}
+
 
 /* =========================================================
    TASK LIST
@@ -3125,6 +3131,11 @@
 .attendance-table .attendance-good,
 .attendance-table .status-present {
     color: #15803d;
+    font-weight: 700;
+}
+
+.attendance-table .attendance-low {
+    color: #b91c1c;
     font-weight: 700;
 }
 

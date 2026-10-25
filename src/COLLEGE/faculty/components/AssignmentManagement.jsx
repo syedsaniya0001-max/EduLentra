@@ -1,9 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { facultyApi } from "../../../api/facultyApi";
 
+const localDate = () => {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
+
 export default function AssignmentManagement() {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sections, setSections] = useState([]);
+  const [branch, setBranch] = useState("");
+  const [subject, setSubject] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [alertMsg, setAlertMsg] = useState(null);
@@ -11,9 +19,8 @@ export default function AssignmentManagement() {
   // Form State
   const [newAssignment, setNewAssignment] = useState({
     title: "",
-    subject: "Data Structures & Algorithms",
-    class: "CSE - 3rd Year (Section A)",
-    dueDate: "2026-10-10",
+    section: "*",
+    dueDate: localDate(),
     maxMarks: 25,
     description: ""
   });
@@ -29,10 +36,13 @@ export default function AssignmentManagement() {
   const fetchAssignments = async () => {
     try {
       setLoading(true);
-      const data = await facultyApi.getAssignments();
-      setAssignments(data);
+      const result = await facultyApi.getAssignments();
+      setAssignments(result.assignments);
+      setSections(result.sections);
+      setBranch(result.branch);
+      setSubject(result.subject);
     } catch (err) {
-      console.error("Assignment fetch error:", err);
+      setAlertMsg({ type: "error", text: err.message || "Unable to load assignments." });
     } finally {
       setLoading(false);
     }
@@ -41,7 +51,7 @@ export default function AssignmentManagement() {
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!newAssignment.title.trim()) {
-      alert("Please enter assignment title.");
+      setAlertMsg({ type: "error", text: "Enter an assignment title." });
       return;
     }
 
@@ -51,16 +61,15 @@ export default function AssignmentManagement() {
       setShowCreateModal(false);
       setNewAssignment({
         title: "",
-        subject: "Data Structures & Algorithms",
-        class: "CSE - 3rd Year (Section A)",
-        dueDate: "2026-10-10",
+        section: "*",
+        dueDate: localDate(),
         maxMarks: 25,
         description: ""
       });
-      fetchAssignments();
+      await fetchAssignments();
       setTimeout(() => setAlertMsg(null), 4000);
     } catch (err) {
-      setAlertMsg({ type: "error", text: "Failed to create assignment." });
+      setAlertMsg({ type: "error", text: err.message || "Failed to create assignment." });
     }
   };
 
@@ -69,7 +78,7 @@ export default function AssignmentManagement() {
     const feedback = gradingFeedback[submissionId] || "";
 
     if (marks === undefined || marks === "") {
-      alert("Please enter marks to grade.");
+      setAlertMsg({ type: "error", text: "Enter marks before grading this submission." });
       return;
     }
 
@@ -78,14 +87,14 @@ export default function AssignmentManagement() {
       setAlertMsg({ type: "success", text: "Submission graded successfully!" });
 
       // Refresh local assignment list and active modal
-      const updated = await facultyApi.getAssignments();
-      setAssignments(updated);
-      const cur = updated.find((a) => a.id === assignmentId);
+      const result = await facultyApi.getAssignments();
+      setAssignments(result.assignments);
+      const cur = result.assignments.find((a) => a.id === assignmentId);
       if (cur) setSelectedAssignment(cur);
 
       setTimeout(() => setAlertMsg(null), 3000);
     } catch (err) {
-      alert("Grading failed.");
+      setAlertMsg({ type: "error", text: err.message || "Grading failed." });
     }
   };
 
@@ -105,7 +114,7 @@ export default function AssignmentManagement() {
       </div>
 
       {alertMsg && (
-        <div className={`fac-alert-banner ${alertMsg.type}`}>
+        <div className={`fac-alert-banner ${alertMsg.type}`} role={alertMsg.type === "error" ? "alert" : "status"}>
           <span>{alertMsg.text}</span>
           <button
             onClick={() => setAlertMsg(null)}
@@ -225,28 +234,28 @@ export default function AssignmentManagement() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div className="fac-form-group">
-                  <label className="fac-form-label">Subject</label>
-                  <select
-                    className="fac-form-select"
-                    value={newAssignment.subject}
-                    onChange={(e) => setNewAssignment({ ...newAssignment, subject: e.target.value })}
-                  >
-                    <option value="Data Structures & Algorithms">Data Structures & Algorithms</option>
-                    <option value="Design and Analysis of Algorithms">Design & Analysis of Algorithms</option>
-                    <option value="Machine Learning">Machine Learning</option>
-                  </select>
+                  <label className="fac-form-label">Branch</label>
+                  <input className="fac-form-input" value={branch} readOnly />
                 </div>
 
                 <div className="fac-form-group">
-                  <label className="fac-form-label">Target Class</label>
+                  <label className="fac-form-label">Subject</label>
+                  <input className="fac-form-input" value={subject} readOnly />
+                </div>
+
+                <div className="fac-form-group">
+                  <label className="fac-form-label">Target Section</label>
                   <select
                     className="fac-form-select"
-                    value={newAssignment.class}
-                    onChange={(e) => setNewAssignment({ ...newAssignment, class: e.target.value })}
+                    value={newAssignment.section}
+                    onChange={(e) => setNewAssignment({ ...newAssignment, section: e.target.value })}
                   >
-                    <option value="CSE - 3rd Year (Section A)">CSE - 3rd Year (Section A)</option>
-                    <option value="CSE - 2nd Year (Section B)">CSE - 2nd Year (Section B)</option>
-                    <option value="AIML - 3rd Year">AIML - 3rd Year</option>
+                    <option value="*">All sections</option>
+                    {sections.map((section) => (
+                      <option key={section} value={section}>
+                        {section === "__unassigned__" ? "Unassigned section" : `Section ${section}`}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -343,14 +352,28 @@ export default function AssignmentManagement() {
                             {sub.studentName} <span style={{ color: "#2563eb", fontWeight: 600 }}>({sub.rollNumber})</span>
                           </div>
                           <div style={{ fontSize: "11.5px", color: "#94a3b8" }}>
-                            Submitted: {sub.submittedAt} • Attachment: <a href="#view" style={{ color: "#2563eb" }}>{sub.fileUrl}</a>
+                            Submitted: {sub.submittedAt} • Attachment:{" "}
+                            {sub.fileUrl ? (
+                              <a
+                                href={sub.fileUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ color: "#2563eb" }}
+                              >
+                                Open attachment
+                              </a>
+                            ) : "None"}
                           </div>
                         </div>
 
                         <span className={`fac-badge ${sub.status === "Graded" ? "fac-badge-green" : "fac-badge-amber"}`}>
-                          {sub.status === "Graded" ? `Graded (${sub.marks}/${selectedAssignment.maxMarks})` : "Pending Evaluation"}
+                          {sub.status === "Graded" ? `Graded (${sub.marks}/${selectedAssignment.maxMarks})` : sub.isLate ? "Submitted late" : "Pending Evaluation"}
                         </span>
                       </div>
+
+                      <p style={{ whiteSpace: "pre-wrap", margin: "10px 0", fontSize: "13px", color: "#334155" }}>
+                        {sub.answer}
+                      </p>
 
                       {/* Grading Input Controls */}
                       <div
@@ -366,6 +389,8 @@ export default function AssignmentManagement() {
                         <input
                           type="number"
                           placeholder={`Score (/${selectedAssignment.maxMarks})`}
+                          min="0"
+                          max={selectedAssignment.maxMarks}
                           style={{ width: "110px", padding: "6px 10px", borderRadius: "6px", border: "1px solid var(--fac-border)", fontSize: "13px" }}
                           defaultValue={sub.marks ?? ""}
                           onChange={(e) =>

@@ -39,6 +39,20 @@
   background: #4338ca;
 }
 
+.reports-page-header select {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  color: #374151;
+}
+
+.generate-report-btn:disabled,
+.download-report-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 /* Summary */
 
 .reports-summary {

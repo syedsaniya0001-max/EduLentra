@@ -22,9 +22,12 @@ import AttendanceMonitoring from "./Edulentra-Hod/src/pages/hod/AttendanceMonito
 import FacultyApproval from "./Edulentra-Hod/src/pages/hod/FacultyApproval";
 import OutpassApproval from "./Edulentra-Hod/src/pages/hod/OutpassApproval";
 import ComplaintManagement from "./Edulentra-Hod/src/pages/hod/ComplaintManagement";
+import SuggestionManagement from "./Edulentra-Hod/src/pages/hod/SuggestionManagement";
 import DepartmentAnnouncements from "./Edulentra-Hod/src/pages/hod/DepartmentAnnouncements";
 import DepartmentReports from "./Edulentra-Hod/src/pages/hod/DepartmentReports";
 import HODProfile from "./Edulentra-Hod/src/pages/hod/HODProfile";
+import HODNotifications from "./Edulentra-Hod/src/pages/hod/HODNotifications";
+import NotFoundPage from "./NotFoundPage";
 import { ForgotPassword, ResetPassword } from "./PasswordRecovery";
 import ProtectedRoleRoute from "./ProtectedRoleRoute";
 import "./role-theme.css";
@@ -32,7 +35,7 @@ import { PortalNavigationProvider } from "./PortalBackButton";
 
 function Mainc() {
   return (
-    <Router basename="/EduLentra">
+    <Router>
       <PortalNavigationProvider>
         <div className="college-app">
           <Routes>
@@ -63,15 +66,18 @@ function Mainc() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/hod" element={<Hod />} />
         <Route path="/hod/dashboard" element={<ProtectedRoleRoute role="hod"><HODDashboard /></ProtectedRoleRoute>} />
+        <Route path="/hod/notifications" element={<ProtectedRoleRoute role="hod"><HODNotifications /></ProtectedRoleRoute>} />
         <Route path="/hod/students" element={<ProtectedRoleRoute role="hod"><StudentManagement /></ProtectedRoleRoute>} />
         <Route path="/hod/faculty" element={<ProtectedRoleRoute role="hod"><FacultyManagement /></ProtectedRoleRoute>} />
         <Route path="/hod/attendance" element={<ProtectedRoleRoute role="hod"><AttendanceMonitoring /></ProtectedRoleRoute>} />
         <Route path="/hod/faculty-approval" element={<ProtectedRoleRoute role="hod"><FacultyApproval /></ProtectedRoleRoute>} />
         <Route path="/hod/outpass" element={<ProtectedRoleRoute role="hod"><OutpassApproval /></ProtectedRoleRoute>} />
         <Route path="/hod/complaints" element={<ProtectedRoleRoute role="hod"><ComplaintManagement /></ProtectedRoleRoute>} />
+        <Route path="/hod/suggestions" element={<ProtectedRoleRoute role="hod"><SuggestionManagement /></ProtectedRoleRoute>} />
         <Route path="/hod/announcements" element={<ProtectedRoleRoute role="hod"><DepartmentAnnouncements /></ProtectedRoleRoute>} />
         <Route path="/hod/reports" element={<ProtectedRoleRoute role="hod"><DepartmentReports /></ProtectedRoleRoute>} />
         <Route path="/hod-profile" element={<ProtectedRoleRoute role="hod"><HODProfile /></ProtectedRoleRoute>} />
+        <Route path="*" element={<NotFoundPage />} />
 
           </Routes>
         </div>
